@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -459,34 +458,61 @@ with st.sidebar:
 # =========================================
 # LAND MASK
 # =========================================
-def is_land(lat, lon):
-    if lon < 132.0 and lat > -6.5: return True
-    if lon < 133.5 and lat > -5.5: return True
-    if lon < 134.5 and lat > -5.0: return True
-    if lon < 136.0 and lat > -4.5: return True
-    if lon < 138.0 and lat > -4.2: return True
-    if lon < 139.0 and lat > -4.3: return True
-    if lon < 140.0 and lat > -4.5: return True
-    if lon < 141.0 and lat > -5.0: return True
-    if lon < 141.5 and lat > -5.5: return True
-    if lon > 140.5 and lon < 141.5 and lat > -8.0 and lat < -5.5: return True
-    if lon < 131.5 and lat > -5.0: return True
-    if lon < 130.5 and lat > -6.5: return True
-    if lat > -5.8 and lon > 136.0 and lon < 138.5: return True
-    if lat > -6.2 and lon > 137.5 and lon < 139.5: return True
-    if lat > -6.8 and lon > 139.0 and lon < 141.0: return True
-    return False
+# Land mask AKURAT berbasis global_land_mask (resolusi ~1 km, offline setelah terpasang).
+# Pasang sekali:  pip install global-land-mask
+try:
+    from global_land_mask import globe as _glm
+    _HAS_GLM = True
+except Exception:
+    _HAS_GLM = False
+
+def _manual_land_mask(lat_arr, lon_arr):
+    """Fallback kasar bila global_land_mask belum terpasang (kurang akurat)."""
+    lat_arr = np.asarray(lat_arr, dtype=float)
+    lon_arr = np.asarray(lon_arr, dtype=float)
+    m = np.zeros(lat_arr.shape, dtype=bool)
+    m |= (lon_arr < 132.5) & (lat_arr > -2.0)
+    m |= (lon_arr < 133.5) & (lat_arr > -3.0)
+    m |= (lon_arr < 134.5) & (lat_arr > -3.5)
+    m |= (lon_arr < 136.0) & (lat_arr > -4.0)
+    m |= (lon_arr < 137.0) & (lat_arr > -4.5)
+    m |= (lon_arr < 138.0) & (lat_arr > -5.0)
+    m |= (lon_arr < 139.0) & (lat_arr > -5.5)
+    m |= (lon_arr < 140.0) & (lat_arr > -6.0)
+    m |= (lon_arr < 141.0) & (lat_arr > -6.5)
+    m |= (lon_arr < 141.5) & (lat_arr > -7.0)
+    m |= (lon_arr >= 141.0) & (lon_arr < 142.0) & (lat_arr > -8.5)
+    m |= (lon_arr >= 140.0) & (lon_arr < 141.0) & (lat_arr > -8.0)
+    m |= (lon_arr > 135.0) & (lon_arr < 139.0) & (lat_arr > -3.5) & (lat_arr < -1.0)
+    m |= (lon_arr > 133.5) & (lon_arr < 135.5) & (lat_arr > -7.5) & (lat_arr < -5.5)
+    m |= (lon_arr > 137.5) & (lon_arr < 139.5) & (lat_arr > -8.5) & (lat_arr < -7.0)
+    return m
+
+def compute_land_mask(lat_arr, lon_arr):
+    """True = daratan. Vektorized: numpy array masuk -> boolean array keluar."""
+    if _HAS_GLM:
+        return np.asarray(_glm.is_land(np.asarray(lat_arr, dtype=float),
+                                       np.asarray(lon_arr, dtype=float)))
+    return _manual_land_mask(lat_arr, lon_arr)
+
+@st.cache_data
+def get_ocean_grid_points():
+    """Titik grid yang berada di LAUT saja (daratan sudah dibuang)."""
+    lat_grid = np.linspace(-12.0, -4.5, 80)
+    lon_grid = np.linspace(130.0, 144.0, 100)
+    lon_g, lat_g = np.meshgrid(lon_grid, lat_grid)
+    lat_flat = lat_g.flatten()
+    lon_flat = lon_g.flatten()
+    ocean = ~compute_land_mask(lat_flat, lon_flat)
+    return lat_flat[ocean], lon_flat[ocean]
 
 # =========================================
 # SPATIAL GRID
 # =========================================
 @st.cache_data
 def build_spatial_grid(val_uo_base, val_vo_base, month_seed, year_seed):
-    lat_grid = np.linspace(-12.0, -4.5, 80)
-    lon_grid = np.linspace(130.0, 144.0, 100)
-    lon_g, lat_g = np.meshgrid(lon_grid, lat_grid)
-    lat_flat = lat_g.flatten()
-    lon_flat = lon_g.flatten()
+    # Hanya titik di laut (daratan sudah dibuang lewat land mask akurat).
+    lat_flat, lon_flat = get_ocean_grid_points()
 
     seed = int(month_seed * 1000 + year_seed)
     rng = np.random.default_rng(seed)
@@ -501,9 +527,6 @@ def build_spatial_grid(val_uo_base, val_vo_base, month_seed, year_seed):
     records = []
     for i in range(len(lat_flat)):
         t_lat, t_lon = float(lat_flat[i]), float(lon_flat[i])
-        if is_land(t_lat, t_lon):
-            continue
-
         vs = var_spasial[i]
         grid_uo = val_uo_base + (vs * 0.012) + rng.normal(0, 0.003)
         grid_vo = val_vo_base + (vs * 0.006) + rng.normal(0, 0.002)
@@ -552,6 +575,21 @@ active_year  = int(df_filter_base["year"].mean())   if not df_filter_base.empty 
 
 df_map = build_spatial_grid(val_uo_base, val_vo_base, active_month, active_year)
 
+@st.cache_data(show_spinner=False)
+def load_batas_provinsi():
+    """GeoJSON batas provinsi Indonesia (best-effort, di-cache).
+    Dipakai sebagai layer garis di atas basemap. Bila gagal diambil
+    (mis. tanpa internet), peta tetap tampil tanpa layer ini."""
+    import urllib.request, json
+    url = ("https://raw.githubusercontent.com/superpikar/"
+           "indonesia-geojson/master/indonesia-province-simple.json")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except Exception:
+        return None
+
 def render_map(df_map, z_col, colorscale, height=520):
     fig = px.scatter_mapbox(
         df_map, lat="lat", lon="lon", color=z_col,
@@ -563,8 +601,22 @@ def render_map(df_map, z_col, colorscale, height=520):
         mapbox_style="carto-positron",
     )
     fig.update_traces(marker=dict(size=4.5))
+
+    # Layer batas administrasi (provinsi) di atas basemap; titik data tetap di atasnya.
+    map_layers = []
+    geojson_prov = load_batas_provinsi()
+    if geojson_prov is not None:
+        map_layers.append(dict(
+            sourcetype="geojson",
+            source=geojson_prov,
+            type="line",
+            color="#34679A",
+            opacity=0.55,
+            line=dict(width=1.0),
+        ))
+
     fig.update_layout(
-        mapbox=dict(center=dict(lat=-8.5, lon=137.0)),
+        mapbox=dict(center=dict(lat=-8.5, lon=137.0), layers=map_layers),
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
         height=height,
         paper_bgcolor="rgba(0,0,0,0)",
@@ -807,7 +859,17 @@ else:
 
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["  Spasial  ", "  Time Series  ", "  Statistik  ", "  Korelasi  ", "  Rose Diagram  "])
+    # Rose diagram HANYA relevan untuk parameter terarah/vektor: angin & gelombang.
+    # Untuk parameter skalar (SST, pH, salinitas, DO, klorofil, dll.) tab ini tidak ditampilkan.
+    PARAM_TERARAH = ["angin_u", "angin_v", "gelombang"]
+    tampilkan_rose = parameter in PARAM_TERARAH
+
+    if tampilkan_rose:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(
+            ["  Spasial  ", "  Time Series  ", "  Statistik  ", "  Korelasi  ", "  Rose Diagram  "])
+    else:
+        tab1, tab2, tab3, tab4 = st.tabs(
+            ["  Spasial  ", "  Time Series  ", "  Statistik  ", "  Korelasi  "])
 
     with tab1:
         cmap_dict = {
@@ -828,18 +890,36 @@ else:
 
     with tab2:
         df_ts = df.groupby("time")[parameter].mean().reset_index()
-        z = np.polyfit(range(len(df_ts)), df_ts[parameter], 1)
+        y_vals = df_ts[parameter].to_numpy(dtype=float)
+        z = np.polyfit(range(len(df_ts)), y_vals, 1)
         p_fn = np.poly1d(z)
+        y_trend = p_fn(range(len(df_ts)))
+
+        # Range sumbu-Y mengikuti sebaran NYATA seluruh data parameter ini
+        # (gabungan garis data + tren), TIDAK dipaksa mulai dari 0.
+        y_lo = float(min(y_vals.min(), y_trend.min()))
+        y_hi = float(max(y_vals.max(), y_trend.max()))
+        span = y_hi - y_lo
+        pad = span * 0.08 if span > 0 else (abs(y_hi) * 0.08 if y_hi != 0 else 1.0)
+        y_floor, y_ceil = y_lo - pad, y_hi + pad
 
         fig_ts = go.Figure()
+        # Baseline TAK TERLIHAT di dasar sumbu sebagai acuan arsiran (BUKAN nol).
+        # Ini mencegah plotly.js menarik sumbu kembali ke 0 seperti pada "fill=tozeroy".
         fig_ts.add_trace(go.Scatter(
-            x=df_ts["time"], y=df_ts[parameter],
+            x=df_ts["time"], y=np.full(len(df_ts), y_floor),
+            mode="lines", line=dict(width=0), hoverinfo="skip", showlegend=False
+        ))
+        # Garis data, diarsir TURUN ke baseline (tonexty = ke trace tepat sebelumnya).
+        fig_ts.add_trace(go.Scatter(
+            x=df_ts["time"], y=y_vals,
             mode="lines", name=PARAM_LABELS_CLEAN.get(parameter, parameter),
             line=dict(color="#1E6BB8", width=1.8),
-            fill="tozeroy", fillcolor="rgba(30,107,184,0.07)"
+            fill="tonexty", fillcolor="rgba(30,107,184,0.10)"
         ))
+        # Garis tren linear.
         fig_ts.add_trace(go.Scatter(
-            x=df_ts["time"], y=p_fn(range(len(df_ts))),
+            x=df_ts["time"], y=y_trend,
             mode="lines", name="Tren Linear",
             line=dict(color="#D4811A", width=2, dash="dot")
         ))
@@ -850,6 +930,8 @@ else:
                         bordercolor="#D6E4F0", borderwidth=1),
             height=400,
         )
+        # Range eksplisit + autorange dimatikan -> sumbu terkunci pada sebaran data.
+        fig_ts.update_yaxes(range=[y_floor, y_ceil], autorange=False)
         st.plotly_chart(fig_ts, use_container_width=True)
 
     with tab3:
@@ -885,30 +967,88 @@ else:
 """, unsafe_allow_html=True)
 
     with tab4:
-        numeric_df = df.select_dtypes(include=np.number).drop(columns=["year","month"], errors="ignore")
-        fig_corr = px.imshow(
-            numeric_df.corr(), text_auto=".2f",
-            color_continuous_scale=[[0,"#EBF3FB"],[0.5,"#5A9EC8"],[1,"#0D1F33"]],
-            title="Matriks Korelasi Pearson — Semua Parameter"
-        )
+        # Buang kolom non-parameter (koordinat & indeks waktu) supaya matriks bersih
+        # dan tidak kebanyakan kolom.
+        DROP_COLS = ["year", "month", "lat", "lon", "latitude", "longitude",
+                     "index", "time", "id"]
+        numeric_df = df.select_dtypes(include=np.number).drop(columns=DROP_COLS, errors="ignore")
+
+        # Label ringkas supaya sel lebih lega.
+        SHORT_CORR = {
+            "uo": "UO", "vo": "VO", "sst": "SST", "ssta": "SSTA",
+            "ph": "pH", "do": "DO", "salinitas": "SAL", "chla": "CHL-a",
+            "gelombang": "WAVE", "current_speed": "CurSpd",
+            "angin_u": "WindU", "angin_v": "WindV",
+            "Ocean_Health_Index": "OHI", "Fisheries_Index": "FSI",
+        }
+        corr = numeric_df.corr().rename(index=SHORT_CORR, columns=SHORT_CORR)
+        labels = list(corr.columns)
+        n = len(labels)
+        vals = corr.values
+        zmin, zmax = float(np.nanmin(vals)), float(np.nanmax(vals))
+        rng_z = (zmax - zmin) or 1.0
+
+        fig_corr = go.Figure(go.Heatmap(
+            z=vals, x=labels, y=labels,
+            colorscale=[[0, "#EBF3FB"], [0.5, "#5A9EC8"], [1, "#0D1F33"]],
+            zmin=zmin, zmax=zmax,
+            xgap=3, ygap=3,
+            hovertemplate="%{y} × %{x}: %{z:.2f}<extra></extra>",
+            colorbar=dict(thickness=12, len=0.7,
+                          tickfont=dict(size=10, family="JetBrains Mono", color="#0D1F33")),
+        ))
+
+        # Angka ditulis manual dengan warna teks ADAPTIF:
+        # putih di sel gelap, navy di sel terang -> selalu terbaca.
+        annotations = []
+        for i in range(n):          # baris (sumbu-y)
+            for j in range(n):      # kolom (sumbu-x)
+                v = vals[i, j]
+                frac = (v - zmin) / rng_z
+                txt_color = "#FFFFFF" if frac > 0.55 else "#0D1F33"
+                annotations.append(dict(
+                    x=labels[j], y=labels[i], text=f"{v:.2f}",
+                    showarrow=False,
+                    font=dict(size=10, color=txt_color, family="JetBrains Mono"),
+                ))
+
+        # Tinggi grafik menyesuaikan jumlah parameter -> sel besar, angka tidak tumpang tindih.
+        chart_h = max(560, 46 * n + 170)
         fig_corr.update_layout(
+            annotations=annotations,
+            title=dict(text="Matriks Korelasi Pearson — Parameter Oseanografi",
+                       font=dict(color="#0D1F33", size=15, family="Inter"), x=0.01),
             paper_bgcolor="#FFFFFF",
-            plot_bgcolor="#F2F6FA",
-            font=dict(family="Inter", color="#3A5070", size=12),
-            title_font=dict(color="#0D1F33", size=14),
-            height=480,
+            plot_bgcolor="#FFFFFF",
+            height=chart_h,
+            margin=dict(l=10, r=10, t=60, b=10),
+            # Label sumbu dibuat gelap & lebih besar agar KONTRAS dengan latar terang.
+            xaxis=dict(tickangle=45, side="bottom",
+                       tickfont=dict(size=12, color="#0D1F33", family="Inter")),
+            yaxis=dict(autorange="reversed",
+                       tickfont=dict(size=12, color="#0D1F33", family="Inter")),
         )
-        fig_corr.update_traces(textfont=dict(size=9, color="#0D1F33"))
         st.plotly_chart(fig_corr, use_container_width=True)
 
-    with tab5:
-        st.markdown('<div class="section-label">ROSE DIAGRAM — DISTRIBUSI ARAH & INTENSITAS</div>', unsafe_allow_html=True)
-        df_rose_src = df_filter_base if not df_filter_base.empty else df
-        rc1, rc2 = st.columns(2)
-        with rc1:
-            st.plotly_chart(make_wind_rose(df_rose_src, f"Arah & Kecepatan Angin · {waktu_label}"), use_container_width=True)
-        with rc2:
-            st.plotly_chart(make_wave_rose(df_rose_src, f"Arah & Tinggi Gelombang · {waktu_label}"), use_container_width=True)
-        st.markdown("""
-<div class="data-note">Rose diagram dibangun dari komponen angin zonal (U) dan meridional (V) menggunakan konvensi meteorologis (arah dari mana angin datang). Arah gelombang menggunakan proxy arah arus permukaan (uo, vo).</div>
+    # Tab Rose Diagram hanya dibangun bila parameter yang dipilih bersifat terarah,
+    # dan menampilkan rose yang sesuai dengan parameter aktif:
+    #   - angin_u / angin_v  -> wind rose
+    #   - gelombang          -> wave rose
+    if tampilkan_rose:
+        with tab5:
+            st.markdown('<div class="section-label">ROSE DIAGRAM — DISTRIBUSI ARAH & INTENSITAS</div>', unsafe_allow_html=True)
+            df_rose_src = df_filter_base if not df_filter_base.empty else df
+            if parameter in ("angin_u", "angin_v"):
+                st.plotly_chart(
+                    make_wind_rose(df_rose_src, f"Arah & Kecepatan Angin · {waktu_label}"),
+                    use_container_width=True)
+                st.markdown("""
+<div class="data-note">Rose diagram angin dibangun dari komponen zonal (U) dan meridional (V) menggunakan konvensi meteorologis (arah dari mana angin datang).</div>
+""", unsafe_allow_html=True)
+            else:  # gelombang
+                st.plotly_chart(
+                    make_wave_rose(df_rose_src, f"Arah & Tinggi Gelombang · {waktu_label}"),
+                    use_container_width=True)
+                st.markdown("""
+<div class="data-note">Rose diagram gelombang menggunakan tinggi gelombang dengan proxy arah arus permukaan (uo, vo).</div>
 """, unsafe_allow_html=True)
