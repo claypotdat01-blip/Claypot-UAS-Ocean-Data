@@ -1,8 +1,38 @@
-streamlit
-plotly
-numpy
-pandas
-xarray
-statsmodels
-netCDF4
-scipy
+# ============================================================
+# LAUTAN — Requirements
+# Instalasi semua sekaligus:
+#   pip install -r requirements.txt
+# ============================================================
+
+# ── Core Streamlit & Data ──────────────────────────────────
+streamlit>=1.32.0
+pandas>=2.0.0
+numpy>=1.26.0
+plotly>=5.20.0
+
+# ── HTTP / Networking ──────────────────────────────────────
+requests>=2.31.0
+
+# ── Sumber Data API ────────────────────────────────────────
+# CMEMS (arus, SST, salinitas)
+copernicusmarine>=1.2.0
+
+# NASA Earthdata (klorofil-a MODIS)
+earthaccess>=0.9.0
+
+# ERA5 / ECMWF (angin, gelombang historis)
+cdsapi>=0.6.1
+
+# NetCDF4 (baca file .nc dari ERA5)
+netCDF4>=1.6.5
+
+# ── Machine Learning (Prediksi) ────────────────────────────
+# Prophet (Facebook/Meta) — forecast deret waktu
+prophet>=1.1.5
+
+# ── Land Mask (filter daratan dari peta) ──────────────────
+# Opsional tapi sangat direkomendasikan untuk akurasi peta
+global-land-mask>=0.1.2
+
+# ── Utilitas ──────────────────────────────────────────────
+python-dotenv>=1.0.0
