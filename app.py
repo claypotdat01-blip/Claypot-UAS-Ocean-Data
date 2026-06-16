@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 st.set_page_config(
-    page_title="LAUTAN — Ocean Intelligence Platform",
+    page_title="OCEANA — Ocean Intelligence Platform",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -895,8 +895,8 @@ else:
         p_fn = np.poly1d(z)
         y_trend = p_fn(range(len(df_ts)))
 
-        # Range sumbu-Y mengikuti sebaran NYATA seluruh data parameter ini
-        # (gabungan garis data + tren), TIDAK dipaksa mulai dari 0.
+        # Rentang sumbu-Y dikunci pada sebaran NYATA seluruh data parameter ini
+        # (gabungan garis data 2001-2020 + garis tren). TIDAK pernah dimulai dari 0.
         y_lo = float(min(y_vals.min(), y_trend.min()))
         y_hi = float(max(y_vals.max(), y_trend.max()))
         span = y_hi - y_lo
@@ -904,18 +904,11 @@ else:
         y_floor, y_ceil = y_lo - pad, y_hi + pad
 
         fig_ts = go.Figure()
-        # Baseline TAK TERLIHAT di dasar sumbu sebagai acuan arsiran (BUKAN nol).
-        # Ini mencegah plotly.js menarik sumbu kembali ke 0 seperti pada "fill=tozeroy".
-        fig_ts.add_trace(go.Scatter(
-            x=df_ts["time"], y=np.full(len(df_ts), y_floor),
-            mode="lines", line=dict(width=0), hoverinfo="skip", showlegend=False
-        ))
-        # Garis data, diarsir TURUN ke baseline (tonexty = ke trace tepat sebelumnya).
+        # Garis data (tanpa fill apa pun -> tidak ada yang bisa menarik sumbu ke 0).
         fig_ts.add_trace(go.Scatter(
             x=df_ts["time"], y=y_vals,
             mode="lines", name=PARAM_LABELS_CLEAN.get(parameter, parameter),
             line=dict(color="#1E6BB8", width=1.8),
-            fill="tonexty", fillcolor="rgba(30,107,184,0.10)"
         ))
         # Garis tren linear.
         fig_ts.add_trace(go.Scatter(
@@ -930,9 +923,14 @@ else:
                         bordercolor="#D6E4F0", borderwidth=1),
             height=400,
         )
-        # Range eksplisit + autorange dimatikan -> sumbu terkunci pada sebaran data.
+        # KUNCI sumbu-Y: autorange dimatikan + range eksplisit -> mustahil tampil 0..8.
         fig_ts.update_yaxes(range=[y_floor, y_ceil], autorange=False)
         st.plotly_chart(fig_ts, use_container_width=True)
+        # Penanda versi + bukti skala: kalau baris ini muncul, kamu menjalankan versi terbaru.
+        st.caption(
+            f"✓ Skala sumbu-Y otomatis: {y_floor:.3f} – {y_ceil:.3f}  ·  "
+            f"mengikuti sebaran data {PARAM_LABELS_CLEAN.get(parameter, parameter)} (bukan dari 0)"
+        )
 
     with tab3:
         desc = df_map[[parameter]].describe()
