@@ -317,11 +317,49 @@ PARAMS_AKADEMISI = {
 MAPBOX_STYLE = "open-street-map"
 
 # ─────────────────────────────────────────────────────────────
-#  SESSION STATE
+#  PAGE: WELCOME
 # ─────────────────────────────────────────────────────────────
-if "page" not in st.session_state:
-    st.session_state.page = "welcome"
+def page_welcome():
+    # Bioluminescent particle CSS animation
+    st.markdown("""
+    <style>
+    @keyframes float-up {
+        0%   { transform: translateY(0px) scale(1);   opacity: 0.6; }
+        50%  { transform: translateY(-18px) scale(1.3); opacity: 0.9; }
+        100% { transform: translateY(-36px) scale(0.8); opacity: 0; }
+    }
+    .particle {
+        position: absolute;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(0,200,255,0.8) 0%, transparent 70%);
+        animation: float-up linear infinite;
+        pointer-events: none;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
+    # TAMBAHKAN unsafe_allow_html=True DI BAWAH INI:
+    st.markdown("""
+    <div class="hero-container">
+        <div class="particle" style="width:6px;height:6px;left:12%;top:72%;animation-duration:4.2s;animation-delay:0s;"></div>
+        <div class="particle" style="width:4px;height:4px;left:28%;top:80%;animation-duration:3.6s;animation-delay:0.8s;"></div>
+        <div class="particle" style="width:8px;height:8px;left:65%;top:75%;animation-duration:5.1s;animation-delay:1.2s;"></div>
+        <div class="particle" style="width:5px;height:5px;left:82%;top:68%;animation-duration:4.0s;animation-delay:0.4s;"></div>
+        <div class="particle" style="width:3px;height:3px;left:45%;top:85%;animation-duration:3.2s;animation-delay:2.0s;"></div>
+
+        <div class="hero-subtitle">Platform Informasi Klimatologi Oseanografi</div>
+        <div class="hero-title">Claypot Ocean Data</div>
+        <div class="coord-badge">🌐 Perairan Papua &nbsp;·&nbsp; Lat -12° s/d -2° &nbsp;·&nbsp; Lon 129° s/d 142°</div>
+        <div class="hero-tagline">
+            Data multidekade kondisi oseanografi Perairan Papua tersedia dalam satu platform — dari informasi zona tangkap nelayan lokal hingga analisis runtun waktu para peneliti.
+        </div>
+        <div style="font-size:0.78rem; color:rgba(126,184,212,0.6); font-family:'JetBrains Mono',monospace; letter-spacing:0.1em;">
+            ▼&nbsp; PILIH AKSES DI BAWAH INI &nbsp;▼
+        </div>
+    </div>
+    """, unsafe_allow_html=True) # <-- Pastikan bagian ini sudah tertulis seperti ini
+
+    st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
 #  HELPERS — DATA SINTETIS (Cloud Mode)
