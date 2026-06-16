@@ -222,6 +222,114 @@ def render_map(df_map, z_col, colorscale, height=520):
     return fig
 
 # =========================================
+# HELPER: HITUNG ARAH ARUS DOMINAN (DINAMIS)
+# =========================================
+def get_arah_arus(df_src):
+    """
+    Hitung arah dominan arus dari komponen uo (zonal) dan vo (meridional).
+    Menggunakan konvensi oseanografi: arah ke mana arus MENGALIR.
+    Mengembalikan nama arah dalam Bahasa Indonesia beserta ikon kompas.
+    """
+    if df_src is None or (hasattr(df_src, "empty") and df_src.empty):
+        return "tidak diketahui", "?"
+
+    mean_uo = float(df_src["uo"].mean())
+    mean_vo = float(df_src["vo"].mean())
+
+    # arctan2(vo, uo) → sudut dari sumbu timur, berlawanan jarum jam
+    # Konversi ke arah mata angin (searah jarum jam dari Utara)
+    # sudut_nav = 90° - sudut_math  →  ke mana arus mengalir dalam derajat geografis
+    angle_math = np.degrees(np.arctan2(mean_vo, mean_uo))
+    angle_nav  = (90.0 - angle_math + 360.0) % 360.0  # 0°=Utara, 90°=Timur, dst.
+
+    # 16 arah mata angin dengan nama & ikon
+    arah_list = [
+        ("Utara",         "↑"),
+        ("Utara-Timur Laut", "↗"),
+        ("Timur Laut",    "↗"),
+        ("Timur-Timur Laut", "↗"),
+        ("Timur",         "→"),
+        ("Timur-Tenggara","↘"),
+        ("Tenggara",      "↘"),
+        ("Selatan-Tenggara", "↘"),
+        ("Selatan",       "↓"),
+        ("Selatan-Barat Daya", "↙"),
+        ("Barat Daya",    "↙"),
+        ("Barat-Barat Daya", "↙"),
+        ("Barat",         "←"),
+        ("Barat-Barat Laut", "↖"),
+        ("Barat Laut",    "↖"),
+        ("Utara-Barat Laut", "↖"),
+    ]
+
+    idx = int((angle_nav + 11.25) / 22.5) % 16
+    nama, ikon = arah_list[idx]
+    return nama, ikon
+
+
+def get_arah_angin(df_src):
+    """
+    Hitung arah dominan angin dari komponen angin_u dan angin_v.
+    Konvensi meteorologi: angin DARI arah mana bertiup (bukan ke mana pergi).
+    """
+    if df_src is None or (hasattr(df_src, "empty") and df_src.empty):
+        return "tidak diketahui", "?"
+
+    mean_u = float(df_src["angin_u"].mean())
+    mean_v = float(df_src["angin_v"].mean())
+
+    # Arah dari mana angin datang: balik vektor (−u, −v)
+    angle_math = np.degrees(np.arctan2(-mean_v, -mean_u))
+    angle_nav  = (90.0 - angle_math + 360.0) % 360.0
+
+    arah_list = [
+        ("Utara",         "↓"),   # angin dari utara bertiup ke selatan
+        ("Utara-Timur Laut", "↙"),
+        ("Timur Laut",    "↙"),
+        ("Timur-Timur Laut", "↙"),
+        ("Timur",         "←"),
+        ("Timur-Tenggara","↖"),
+        ("Tenggara",      "↖"),
+        ("Selatan-Tenggara", "↖"),
+        ("Selatan",       "↑"),
+        ("Selatan-Barat Daya", "↗"),
+        ("Barat Daya",    "↗"),
+        ("Barat-Barat Daya", "↗"),
+        ("Barat",         "→"),
+        ("Barat-Barat Laut", "↘"),
+        ("Barat Laut",    "↘"),
+        ("Utara-Barat Laut", "↘"),
+    ]
+
+    idx = int((angle_nav + 11.25) / 22.5) % 16
+    nama, ikon = arah_list[idx]
+    return nama, ikon
+
+
+def format_rekomendasi_normal(df_src, label_periode=""):
+    """
+    Buat teks rekomendasi dinamis untuk kondisi NORMAL
+    berdasarkan arah arus dan angin aktual dari data.
+    """
+    nama_arus, ikon_arus = get_arah_arus(df_src)
+    nama_angin, ikon_angin = get_arah_angin(df_src)
+
+    kec_arus = float(df_src["current_speed"].mean()) if "current_speed" in df_src.columns else 0.0
+    kec_angin = float(np.sqrt(df_src["angin_u"]**2 + df_src["angin_v"]**2).mean()) \
+        if "angin_u" in df_src.columns else 0.0
+
+    teks = (
+        f"**Kondisi normal{' — ' + label_periode if label_periode else ''}.** "
+        f"Ikan bergerak mengikuti arus yang dominan ke arah **{nama_arus}** {ikon_arus} "
+        f"(kecepatan rata-rata {kec_arus:.3f} m/s). "
+        f"Angin bertiup dari **{nama_angin}** {ikon_angin} "
+        f"(kecepatan {kec_angin:.1f} m/s) — "
+        f"sesuaikan posisi perahu agar tidak melawan arus."
+    )
+    return teks
+
+
+# =========================================
 # ROSE DIAGRAM HELPERS
 # =========================================
 def make_wind_rose(df_src, title="Rose Diagram Angin"):
@@ -416,7 +524,6 @@ with st.sidebar:
 
     # ── Reset prophet cache saat ganti mode ──────────────────
     if st.session_state.prev_mode != mode:
-        # Bersihkan cache prophet agar tidak bocor antar mode
         keys_to_del = [k for k in st.session_state.keys() if k.startswith("prophet_")]
         for k in keys_to_del:
             del st.session_state[k]
@@ -464,7 +571,6 @@ with st.sidebar:
                 st.session_state.api_status  = result["status"]
                 st.session_state.last_update = datetime.datetime.utcnow()
 
-        # Status tiap API — selalu tampil setelah pernah diklik
         if st.session_state.api_status:
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
             st.markdown("**Status Koneksi API:**")
@@ -476,7 +582,6 @@ with st.sidebar:
                     unsafe_allow_html=True
                 )
 
-        # Waktu update terakhir
         if st.session_state.last_update:
             wib = st.session_state.last_update + datetime.timedelta(hours=7)
             st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -501,7 +606,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # ── Parameter selector (akademisi semua mode) ────────────
     PARAM_LABELS = {
         "Ocean_Health_Index":"Ocean Health Index","Fisheries_Index":"Fisheries Index",
         "sst":"Sea Surface Temp (SST)","ssta":"SST Anomali","ph":"pH Laut",
@@ -523,7 +627,6 @@ with st.sidebar:
 
 # =========================================
 # BUILD SPATIAL GRID
-# (hanya untuk mode yg butuh peta spasial)
 # =========================================
 def build_map_from_df(df_src):
     if df_src is None or (hasattr(df_src, 'empty') and df_src.empty):
@@ -538,9 +641,7 @@ def build_map_from_df(df_src):
     return build_spatial_grid(val_uo, val_vo, active_month, active_year)
 
 # =========================================
-# =====================================================================
 #   MODE: HISTORIS
-# =====================================================================
 # =========================================
 if mode == "Historis":
 
@@ -550,6 +651,11 @@ if mode == "Historis":
     if st.session_state.role == "nelayan":
         mean_fsi = float(df_map["Fisheries_Index"].mean())
         status   = get_fisheries_status(mean_fsi, df_map)
+
+        # Hitung arah arus & angin dari data historis yang sedang ditampilkan
+        df_rose_src = df_hist if not df_hist.empty else df
+        arah_arus,  ikon_arus  = get_arah_arus(df_rose_src)
+        arah_angin, ikon_angin = get_arah_angin(df_rose_src)
 
         st.markdown(f"""
 <div class="page-header">
@@ -588,7 +694,6 @@ if mode == "Historis":
         with tabs_n[1]:
             st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG</div>', unsafe_allow_html=True)
             rc1, rc2 = st.columns(2)
-            df_rose_src = df_hist if not df_hist.empty else df
             with rc1: st.plotly_chart(make_wind_rose(df_rose_src, f"Angin · {waktu_label}"), use_container_width=True)
             with rc2: st.plotly_chart(make_wave_rose(df_rose_src, f"Gelombang · {waktu_label}"), use_container_width=True)
 
@@ -597,11 +702,25 @@ if mode == "Historis":
             with col_r1:
                 st.markdown('<div class="section-label">REKOMENDASI ZONA</div>', unsafe_allow_html=True)
                 if status["text"] == "SANGAT BAIK":
-                    st.success("**Area oranye/merah direkomendasikan.** Nutrisi laut melimpah — turunkan jaring di perairan dalam Arafura.")
+                    st.success(
+                        "**Area oranye/merah direkomendasikan.** Nutrisi laut melimpah — "
+                        "turunkan jaring di perairan dalam Arafura. "
+                        f"Arus dominan menuju **{arah_arus}** {ikon_arus}, "
+                        f"angin bertiup dari **{arah_angin}** {ikon_angin}."
+                    )
                 elif status["text"] == "NORMAL":
-                    st.info("**Kondisi normal.** Ikan bergerak mengikuti arus — ikuti arah arus ke tenggara.")
+                    st.info(
+                        f"**Kondisi normal.** Ikan bergerak mengikuti arus — "
+                        f"ikuti arah arus ke **{arah_arus}** {ikon_arus}. "
+                        f"Angin bertiup dari **{arah_angin}** {ikon_angin}, "
+                        f"sesuaikan posisi perahu agar tidak melawan arus."
+                    )
                 else:
-                    st.warning("**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk dan muara sungai.")
+                    st.warning(
+                        "**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk "
+                        f"dan muara sungai. Waspadai arus ke **{arah_arus}** {ikon_arus} "
+                        f"dan angin dari **{arah_angin}** {ikon_angin}."
+                    )
             with col_r2:
                 st.markdown('<div class="section-label">KONDISI PERAIRAN</div>', unsafe_allow_html=True)
                 st.markdown(f"""
@@ -614,6 +733,14 @@ if mode == "Historis":
     <div style="text-align:center;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Dissolved O₂</div>
       <div style="font-size:22px;font-weight:700;color:#0D1F33;">{df_map['do'].mean():.2f} <span style="font-size:12px;color:#5A7FA0;">mg/L</span></div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Arah Arus</div>
+      <div style="font-size:18px;font-weight:700;color:#0D1F33;">{ikon_arus} {arah_arus}</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;">Angin Dari</div>
+      <div style="font-size:18px;font-weight:700;color:#0D1F33;">{ikon_angin} {arah_angin}</div>
     </div>
   </div>
 </div>
@@ -759,17 +886,13 @@ if mode == "Historis":
                     st.markdown('<div class="data-note">Rose diagram gelombang menggunakan tinggi gelombang dengan proxy arah arus permukaan (uo, vo).</div>', unsafe_allow_html=True)
 
 # =========================================
-# =====================================================================
 #   MODE: REAL TIME
-#   Hanya tampil setelah tombol "Muat Data" diklik dan berhasil/gagal
-# =====================================================================
 # =========================================
 elif mode == "Real Time":
 
     now_utc = datetime.datetime.utcnow()
     now_wib = now_utc + datetime.timedelta(hours=7)
 
-    # ── Belum pernah diklik ──────────────────────────────────
     if st.session_state.last_update is None:
         st.markdown("""
 <div class="page-header">
@@ -796,11 +919,9 @@ elif mode == "Real Time":
 """, unsafe_allow_html=True)
         st.stop()
 
-    # ── Sudah diklik — tentukan sumber data yg dipakai ──────
-    wib_str = now_wib.strftime('%d %b %Y %H:%M') + " WIB"
+    wib_str    = now_wib.strftime('%d %b %Y %H:%M') + " WIB"
     update_wib = (st.session_state.last_update + datetime.timedelta(hours=7)).strftime('%d %b %Y %H:%M') + " WIB"
 
-    # Hitung berapa API berhasil
     n_ok  = sum(1 for v in st.session_state.api_status.values() if v)
     n_all = len(st.session_state.api_status)
 
@@ -810,13 +931,16 @@ elif mode == "Real Time":
         sumber_badge = "🟢 Data langsung dari API"
         is_live      = True
     else:
-        # Fallback klimatologis bulan ini — JELAS diberi label
         df_rt      = df[df["month"] == now_utc.month].copy()
         data_label = f"Estimasi Klimatologis · Bulan {now_utc.month} (API tidak tersedia)"
         sumber_badge = "🟡 Estimasi klimatologis (API gagal)"
         is_live    = False
 
     df_map_rt = build_map_from_df(df_rt)
+
+    # Hitung arah arus & angin dari data real-time (atau fallback klimatologis)
+    arah_arus_rt,  ikon_arus_rt  = get_arah_arus(df_rt)
+    arah_angin_rt, ikon_angin_rt = get_arah_angin(df_rt)
 
     # ── NELAYAN · REAL TIME ──────────────────────────────────
     if st.session_state.role == "nelayan":
@@ -834,7 +958,6 @@ elif mode == "Real Time":
 </div>
 """, unsafe_allow_html=True)
 
-        # Banner sumber data
         if is_live:
             st.markdown(f"""
 <div style="background:#EDFAF3;border:1px solid #9FD9BE;border-left:4px solid #00895A;border-radius:6px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00895A;">
@@ -881,7 +1004,7 @@ elif mode == "Real Time":
                 ("🌡 SST", f"{df_map_rt['sst'].mean():.2f} °C", "CMEMS" if is_live else "Estimasi"),
                 ("🧪 Salinitas", f"{df_map_rt['salinitas'].mean():.2f} PSU", "CMEMS" if is_live else "Estimasi"),
                 ("🌿 Klorofil-a", f"{df_map_rt['chla'].mean():.3f} mg/m³", "NASA MODIS" if is_live else "Estimasi"),
-                ("💧 Dissolved O₂", f"{df_map_rt['do'].mean():.2f} mg/L", "Derivasi" ),
+                ("💧 Dissolved O₂", f"{df_map_rt['do'].mean():.2f} mg/L", "Derivasi"),
                 ("🌊 Gelombang", f"{df_map_rt['gelombang'].mean():.2f} m", "BMKG" if is_live else "Estimasi"),
                 ("💨 Angin U", f"{df_map_rt['angin_u'].mean():.2f} m/s", "ERA5" if is_live else "Estimasi"),
             ]
@@ -907,11 +1030,25 @@ elif mode == "Real Time":
             with col_r1:
                 st.markdown('<div class="section-label">REKOMENDASI ZONA</div>', unsafe_allow_html=True)
                 if status["text"] == "SANGAT BAIK":
-                    st.success("**Area oranye/merah direkomendasikan.** Nutrisi laut melimpah — turunkan jaring di perairan dalam Arafura.")
+                    st.success(
+                        "**Area oranye/merah direkomendasikan.** Nutrisi laut melimpah — "
+                        "turunkan jaring di perairan dalam Arafura. "
+                        f"Arus dominan menuju **{arah_arus_rt}** {ikon_arus_rt}, "
+                        f"angin bertiup dari **{arah_angin_rt}** {ikon_angin_rt}."
+                    )
                 elif status["text"] == "NORMAL":
-                    st.info("**Kondisi normal.** Ikan bergerak mengikuti arus — ikuti arah arus ke tenggara.")
+                    st.info(
+                        f"**Kondisi normal.** Ikan bergerak mengikuti arus — "
+                        f"ikuti arah arus ke **{arah_arus_rt}** {ikon_arus_rt}. "
+                        f"Angin bertiup dari **{arah_angin_rt}** {ikon_angin_rt}, "
+                        f"sesuaikan posisi perahu agar tidak melawan arus."
+                    )
                 else:
-                    st.warning("**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk dan muara sungai.")
+                    st.warning(
+                        "**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk "
+                        f"dan muara sungai. Waspadai arus ke **{arah_arus_rt}** {ikon_arus_rt} "
+                        f"dan angin dari **{arah_angin_rt}** {ikon_angin_rt}."
+                    )
             with col_r2:
                 st.markdown('<div class="section-label">SST TERKINI</div>', unsafe_allow_html=True)
                 st.plotly_chart(render_map(df_map_rt, "sst", "Plasma", height=300), use_container_width=True)
@@ -968,7 +1105,6 @@ elif mode == "Real Time":
             st.markdown(f"""<span class="source-pill">🛰 {sumber_badge}</span><span class="source-pill">📅 {update_wib}</span>""", unsafe_allow_html=True)
 
         with tabs_rt_ak[1]:
-            # Bandingkan nilai RT vs rata-rata historis bulan yang sama
             hist_same_month = df[df["month"] == now_utc.month][parameter]
             rt_val   = df_map_rt[parameter].mean()
             hist_val = hist_same_month.mean()
@@ -981,7 +1117,6 @@ elif mode == "Real Time":
             c2c.metric("Rata-Rata Historis",f"{hist_val:.4f}", f"Bulan {now_utc.strftime('%B')} (2001–2020)")
             c3c.metric("Deviasi (%)",       f"{delta_pct:+.2f}%", "terhadap klimatologi")
 
-            # Time series historis + garis nilai RT
             df_ts_rt = df.groupby("time")[parameter].mean().reset_index()
             fig_compare = go.Figure()
             fig_compare.add_trace(go.Scatter(
@@ -1021,10 +1156,7 @@ elif mode == "Real Time":
                 with rc2: st.plotly_chart(make_wave_rose(df_rt, f"Gelombang · {data_label}"), use_container_width=True)
 
 # =========================================
-# =====================================================================
 #   MODE: PREDIKSI
-#   Khusus Prophet — tidak ada data historis di sini
-# =====================================================================
 # =========================================
 elif mode == "Prediksi":
 
@@ -1060,7 +1192,6 @@ elif mode == "Prediksi":
             for idx, kp in enumerate(KEY_PARAMS_NELAYAN):
                 fc, metrics = st.session_state[f"prophet_nelayan_{kp}"]
                 future_only = fc[fc["ds"] > df["time"].max()]
-                # Ambil baris untuk bulan prediksi yg dipilih
                 target_row = future_only[future_only["ds"].dt.month == month_idx_pred]
                 if not target_row.empty:
                     pred_val = float(target_row["yhat"].iloc[0])
@@ -1095,17 +1226,37 @@ elif mode == "Prediksi":
             st.plotly_chart(fig_fsi_pred, use_container_width=True)
 
             # Rekomendasi berdasarkan nilai prediksi FSI
-            fsi_pred = float(fc_fsi[fc_fsi["ds"].dt.month == month_idx_pred]["yhat"].iloc[0]) \
-                if not fc_fsi[fc_fsi["ds"].dt.month == month_idx_pred].empty else 50.0
-            fsi_p25 = df["Fisheries_Index"].quantile(0.25)
-            fsi_p75 = df["Fisheries_Index"].quantile(0.75)
+            # Gunakan data historis bulan yang diprediksi sebagai proxy arah arus
+            df_bulan_pred = df[df["month"] == month_idx_pred]
+            arah_arus_pred,  ikon_arus_pred  = get_arah_arus(df_bulan_pred)
+            arah_angin_pred, ikon_angin_pred = get_arah_angin(df_bulan_pred)
+
+            fsi_pred_rows = fc_fsi[fc_fsi["ds"].dt.month == month_idx_pred]
+            fsi_pred = float(fsi_pred_rows["yhat"].iloc[0]) if not fsi_pred_rows.empty else 50.0
+            fsi_p25  = df["Fisheries_Index"].quantile(0.25)
+            fsi_p75  = df["Fisheries_Index"].quantile(0.75)
+
             st.markdown('<div class="section-label">PROYEKSI REKOMENDASI</div>', unsafe_allow_html=True)
             if fsi_pred >= fsi_p75:
-                st.success(f"**Proyeksi {bulan_pred}: SANGAT BAIK (FSI {fsi_pred:.1f}/100).** Kondisi laut diprediksi mendukung penangkapan optimal.")
+                st.success(
+                    f"**Proyeksi {bulan_pred}: SANGAT BAIK (FSI {fsi_pred:.1f}/100).** "
+                    f"Kondisi laut diprediksi mendukung penangkapan optimal. "
+                    f"Arus diprediksi menuju **{arah_arus_pred}** {ikon_arus_pred}, "
+                    f"angin dari **{arah_angin_pred}** {ikon_angin_pred}."
+                )
             elif fsi_pred >= fsi_p25:
-                st.info(f"**Proyeksi {bulan_pred}: NORMAL (FSI {fsi_pred:.1f}/100).** Tangkapan diperkirakan rata-rata.")
+                st.info(
+                    f"**Proyeksi {bulan_pred}: NORMAL (FSI {fsi_pred:.1f}/100).** "
+                    f"Tangkapan diperkirakan rata-rata — ikuti arah arus ke **{arah_arus_pred}** {ikon_arus_pred}. "
+                    f"Angin diprediksi dari **{arah_angin_pred}** {ikon_angin_pred}."
+                )
             else:
-                st.warning(f"**Proyeksi {bulan_pred}: WASPADA (FSI {fsi_pred:.1f}/100).** Pertimbangkan mengurangi aktivitas melaut jauh.")
+                st.warning(
+                    f"**Proyeksi {bulan_pred}: WASPADA (FSI {fsi_pred:.1f}/100).** "
+                    f"Pertimbangkan mengurangi aktivitas melaut jauh. "
+                    f"Waspadai arus ke **{arah_arus_pred}** {ikon_arus_pred} "
+                    f"dan angin dari **{arah_angin_pred}** {ikon_angin_pred}."
+                )
         else:
             st.info("Klik **▶ Jalankan Prediksi** untuk melihat proyeksi kondisi laut.")
 
@@ -1158,7 +1309,6 @@ elif mode == "Prediksi":
                     fill="toself", fillcolor="rgba(232,90,12,0.12)",
                     line=dict(color="rgba(255,255,255,0)"),
                     name="Interval Kepercayaan 80%"))
-                # Tandai bulan target
                 target_rows = future_only[future_only["ds"].dt.month == month_idx_pred]
                 if not target_rows.empty:
                     fig_fc.add_trace(go.Scatter(
@@ -1172,7 +1322,6 @@ elif mode == "Prediksi":
                 with col_ph1:
                     st.plotly_chart(fig_fc, use_container_width=True)
 
-                # Nilai prediksi untuk bulan target
                 if not target_rows.empty:
                     tv = float(target_rows["yhat"].iloc[0])
                     tl = float(target_rows["yhat_lower"].iloc[0])
