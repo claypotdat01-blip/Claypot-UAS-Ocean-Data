@@ -27,7 +27,7 @@ CMEMS_PASS = os.getenv("CMEMS_PASS", "limaJuni_2026")
 # ── NASA Earthdata (MODIS Klorofil-a) ──────────────────────
 # Daftar: https://urs.earthdata.nasa.gov
 # Langsung aktif setelah verifikasi email
-NASA_USER = os.getenv("NASA_USER", "claypotdat1")
+NASA_USER = os.getenv("NASA_USER", "claypotdat01@gmail.com")
 NASA_PASS = os.getenv("NASA_PASS", "limaJuni_2026")
 
 # ── CDS / ERA5 (ECMWF Angin) ───────────────────────────────
