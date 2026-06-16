@@ -87,11 +87,14 @@ hr { border-color: #D6E4F0 !important; }
 .section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #1E6BB8; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px; font-weight: 500; }
 .coord-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3A6080; background: #EBF3FB; padding: 3px 10px; border-radius: 4px; border: 1px solid #C0D8EE; display: inline-block; margin: 2px; }
 .data-note { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7BAFD4; background: #EBF3FB; border-left: 3px solid #1E6BB8; padding: 8px 12px; border-radius: 0 4px 4px 0; margin-top: 8px; }
+.data-note-warn { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8a5a00; background: #FEF6E8; border-left: 3px solid #D4811A; padding: 8px 12px; border-radius: 0 4px 4px 0; margin-top: 8px; }
 .update-badge { display:inline-flex; align-items:center; gap:6px; background:#0A3620; border:1px solid #1E7A45; border-radius:20px; padding:4px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4DD68A; letter-spacing:0.08em; }
 .pulse { width:7px; height:7px; background:#4DD68A; border-radius:50%; animation:pulse 1.5s infinite; display:inline-block; }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.3)} }
-.api-status-ok  { color:#00895A; font-weight:700; }
-.api-status-err { color:#D4811A; font-weight:700; }
+.mode-badge-hist { display:inline-flex;align-items:center;gap:6px;background:#EBF3FB;border:1px solid #C0D8EE;border-radius:20px;padding:4px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#1E6BB8;letter-spacing:0.08em; }
+.mode-badge-pred { display:inline-flex;align-items:center;gap:6px;background:#FEF6E8;border:1px solid #F0C070;border-radius:20px;padding:4px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#D4811A;letter-spacing:0.08em; }
+.source-pill { display:inline-block;background:#162A42;border:1px solid #2A4A6A;border-radius:4px;padding:2px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#7BAFD4;letter-spacing:0.08em;margin:2px; }
+.rt-empty-box { background:#FFFFFF;border:2px dashed #C0D8EE;border-radius:12px;padding:56px 32px;text-align:center; }
 </style>
 """
 st.markdown(STYLE, unsafe_allow_html=True)
@@ -113,6 +116,7 @@ if "role"        not in st.session_state: st.session_state.role        = "akadem
 if "last_update" not in st.session_state: st.session_state.last_update = None
 if "api_status"  not in st.session_state: st.session_state.api_status  = {}
 if "rt_data"     not in st.session_state: st.session_state.rt_data     = None
+if "prev_mode"   not in st.session_state: st.session_state.prev_mode   = None
 
 # =========================================
 # LOAD DATA HISTORIS
@@ -318,7 +322,6 @@ if st.session_state.page == "home":
 </div>
 """, unsafe_allow_html=True)
 
-    # Sumber data badges
     st.markdown("""
 <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:32px;">
   <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:4px;letter-spacing:0.08em;">🌊 CMEMS · Arus/SST/Salinitas</span>
@@ -409,102 +412,104 @@ with st.sidebar:
         st.rerun()
     st.markdown("---")
 
-    # ── Indikator update terakhir ──
-    if st.session_state.last_update:
-        wib = st.session_state.last_update + datetime.timedelta(hours=7)
-        st.markdown(f"""
-<div class="update-badge">
-  <span class="pulse"></span>
-  LIVE · {wib.strftime('%d %b %Y %H:%M')} WIB
-</div>
-""", unsafe_allow_html=True)
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
     mode = st.selectbox("MODE DATA", ["Historis", "Real Time", "Prediksi"])
+
+    # ── Reset prophet cache saat ganti mode ──────────────────
+    if st.session_state.prev_mode != mode:
+        # Bersihkan cache prophet agar tidak bocor antar mode
+        keys_to_del = [k for k in st.session_state.keys() if k.startswith("prophet_")]
+        for k in keys_to_del:
+            del st.session_state[k]
+        st.session_state.prev_mode = mode
+
     st.markdown("---")
 
+    # ── SIDEBAR: Historis ────────────────────────────────────
     if mode == "Historis":
+        st.markdown("""<div class="data-note">📂 Data klimatologi 2001–2020 dari rangkuman_historis_20tahun.csv</div>""", unsafe_allow_html=True)
         tahun = st.selectbox("TAHUN", sorted(df["year"].unique(), reverse=True))
         breakdown = st.radio("RESOLUSI WAKTU", ["Bulanan", "Musiman"])
         musim_map_dict = {
             "Musim Barat":  [12,1,2], "Peralihan I": [3,4,5],
             "Musim Timur":  [6,7,8],  "Peralihan II":[9,10,11],
         }
-        df_filter_base = df[df["year"] == tahun].copy()
+        df_hist = df[df["year"] == tahun].copy()
         if breakdown == "Bulanan":
             bln_list = ["Januari","Februari","Maret","April","Mei","Juni",
                         "Juli","Agustus","September","Oktober","November","Desember"]
             bulan = st.selectbox("BULAN", bln_list)
             idx_bulan = bln_list.index(bulan) + 1
-            df_filter_base = df_filter_base[df_filter_base["month"] == idx_bulan]
+            df_hist = df_hist[df_hist["month"] == idx_bulan]
             waktu_label = f"{bulan} {tahun}"
         else:
             musim_pilih = st.selectbox("MUSIM", list(musim_map_dict.keys()))
-            df_filter_base = df_filter_base[df_filter_base["month"].isin(musim_map_dict[musim_pilih])]
+            df_hist = df_hist[df_hist["month"].isin(musim_map_dict[musim_pilih])]
             waktu_label = f"{musim_pilih} {tahun}"
 
+    # ── SIDEBAR: Real Time ───────────────────────────────────
     elif mode == "Real Time":
         st.markdown("""
-<div class="data-note">Data langsung dari CMEMS, NASA MODIS, ERA5, dan BMKG. Klik tombol di bawah untuk memuat data terbaru.</div>
+<div class="data-note">🛰 Data langsung dari:<br>· CMEMS (arus, SST, salinitas)<br>· NASA MODIS (klorofil-a)<br>· ERA5/ECMWF (angin)<br>· BMKG (gelombang)</div>
 """, unsafe_allow_html=True)
-        if st.button("🔄 Muat Data Real-Time", use_container_width=True, key="btn_rt"):
-            with st.spinner("Menghubungi API..."):
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+        if st.button("🔄 Muat Data Real-Time Sekarang", use_container_width=True, key="btn_rt"):
+            with st.spinner("Menghubungi semua API..."):
                 result = build_realtime_dataframe(
                     cmems_user=CMEMS_USER, cmems_pass=CMEMS_PASS,
                     nasa_user=NASA_USER,   nasa_pass=NASA_PASS,
+                    cds_uid=CDS_UID,       cds_key=CDS_KEY,
                 )
-                if result["data"] is not None:
-                    st.session_state.rt_data    = result["data"]
-                    st.session_state.api_status = result["status"]
-                    st.session_state.last_update = datetime.datetime.utcnow()
-                    st.success("Data berhasil dimuat!")
-                else:
-                    st.warning("API tidak tersedia. Menggunakan estimasi klimatologis.")
-                    st.session_state.rt_data    = None
-                    st.session_state.api_status = result["status"]
+                st.session_state.rt_data     = result["data"]
+                st.session_state.api_status  = result["status"]
+                st.session_state.last_update = datetime.datetime.utcnow()
 
-        # Tampilkan status tiap API
+        # Status tiap API — selalu tampil setelah pernah diklik
         if st.session_state.api_status:
-            st.markdown("**Status API:**")
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            st.markdown("**Status Koneksi API:**")
             for api_name, ok in st.session_state.api_status.items():
-                icon = "🟢" if ok else "🔴"
-                st.markdown(f"<span style='font-size:11px;font-family:monospace'>{icon} {api_name}</span>", unsafe_allow_html=True)
+                icon  = "🟢" if ok else "🔴"
+                label = "Terhubung" if ok else "Gagal"
+                st.markdown(
+                    f"<span style='font-size:11px;font-family:monospace'>{icon} {api_name} — {label}</span>",
+                    unsafe_allow_html=True
+                )
 
-        # Fallback jika belum ada data RT
-        if st.session_state.rt_data is not None:
-            df_filter_base = st.session_state.rt_data
-        else:
-            now = datetime.datetime.utcnow()
-            df_filter_base = df[df["month"] == now.month].copy()
-
-        waktu_label = f"Real-Time · {datetime.datetime.utcnow().strftime('%d %b %Y %H:%M')} UTC"
-
-    else:  # Prediksi
-        st.markdown("""
-<div class="data-note">Prediksi menggunakan model Prophet (Meta) dilatih pada data historis 2001–2020.</div>
+        # Waktu update terakhir
+        if st.session_state.last_update:
+            wib = st.session_state.last_update + datetime.timedelta(hours=7)
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            st.markdown(f"""
+<div class="update-badge">
+  <span class="pulse"></span>
+  TERAKHIR: {wib.strftime('%d %b %Y %H:%M')} WIB
+</div>
 """, unsafe_allow_html=True)
-        bulan_pred = st.selectbox("TARGET PREDIKSI",
+
+    # ── SIDEBAR: Prediksi ────────────────────────────────────
+    else:
+        st.markdown("""
+<div class="data-note">🤖 Prediksi menggunakan Prophet (Meta/Facebook) dilatih pada data historis 2001–2020.</div>
+""", unsafe_allow_html=True)
+        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+        bulan_pred = st.selectbox("TARGET BULAN PREDIKSI",
             ["Juli 2026","Agustus 2026","September 2026","Oktober 2026",
              "November 2026","Desember 2026"])
-        horizon_map = {
-            "Juli 2026":9,"Agustus 2026":10,"September 2026":11,
-            "Oktober 2026":12,"November 2026":13,"Desember 2026":14,
-        }
-        horizon_months = horizon_map[bulan_pred]
         idx_p = {"Juli":7,"Agustus":8,"September":9,"Oktober":10,"November":11,"Desember":12}
-        month_idx = idx_p[bulan_pred.split()[0]]
-        df_filter_base = df[df["month"] == month_idx].copy()
-        waktu_label = f"Proyeksi Prophet · {bulan_pred}"
+        month_idx_pred = idx_p[bulan_pred.split()[0]]
 
     st.markdown("---")
+
+    # ── Parameter selector (akademisi semua mode) ────────────
+    PARAM_LABELS = {
+        "Ocean_Health_Index":"Ocean Health Index","Fisheries_Index":"Fisheries Index",
+        "sst":"Sea Surface Temp (SST)","ssta":"SST Anomali","ph":"pH Laut",
+        "do":"Dissolved Oxygen","salinitas":"Salinitas","chla":"Klorofil-a",
+        "current_speed":"Kecepatan Arus","gelombang":"Tinggi Gelombang",
+        "angin_u":"Angin Zonal (U)","angin_v":"Angin Meridional (V)",
+    }
     if st.session_state.role == "akademisi":
-        PARAM_LABELS = {
-            "Ocean_Health_Index":"Ocean Health Index","Fisheries_Index":"Fisheries Index",
-            "sst":"Sea Surface Temp (SST)","ssta":"SST Anomali","ph":"pH Laut",
-            "do":"Dissolved Oxygen","salinitas":"Salinitas","chla":"Klorofil-a",
-            "current_speed":"Kecepatan Arus","gelombang":"Tinggi Gelombang",
-            "angin_u":"Angin Zonal (U)","angin_v":"Angin Meridional (V)",
-        }
         parameter = st.selectbox("PARAMETER RISET", list(PARAM_LABELS.keys()),
                                   format_func=lambda x: PARAM_LABELS[x])
 
@@ -518,31 +523,48 @@ with st.sidebar:
 
 # =========================================
 # BUILD SPATIAL GRID
+# (hanya untuk mode yg butuh peta spasial)
 # =========================================
-val_uo_base  = float(df_filter_base["uo"].mean()   if not df_filter_base.empty else -0.05)
-val_vo_base  = float(df_filter_base["vo"].mean()   if not df_filter_base.empty else -0.01)
-active_month = int(df_filter_base["month"].mean()) if not df_filter_base.empty else 6
-active_year  = int(df_filter_base["year"].mean())  if not df_filter_base.empty else 2010
-
-df_map = build_spatial_grid(val_uo_base, val_vo_base, active_month, active_year)
+def build_map_from_df(df_src):
+    if df_src is None or (hasattr(df_src, 'empty') and df_src.empty):
+        val_uo = -0.05; val_vo = -0.01
+        active_month = datetime.datetime.utcnow().month
+        active_year  = datetime.datetime.utcnow().year
+    else:
+        val_uo = float(df_src["uo"].mean())
+        val_vo = float(df_src["vo"].mean())
+        active_month = int(df_src["month"].mean()) if "month" in df_src.columns else datetime.datetime.utcnow().month
+        active_year  = int(df_src["year"].mean())  if "year"  in df_src.columns else datetime.datetime.utcnow().year
+    return build_spatial_grid(val_uo, val_vo, active_month, active_year)
 
 # =========================================
-# DASHBOARD — NELAYAN
+# =====================================================================
+#   MODE: HISTORIS
+# =====================================================================
 # =========================================
-if st.session_state.role == "nelayan":
-    mean_fsi = float(df_map["Fisheries_Index"].mean())
-    status   = get_fisheries_status(mean_fsi, df_map)
+if mode == "Historis":
 
-    st.markdown(f"""
+    df_map = build_map_from_df(df_hist)
+
+    # ── NELAYAN ─────────────────────────────────────────────
+    if st.session_state.role == "nelayan":
+        mean_fsi = float(df_map["Fisheries_Index"].mean())
+        status   = get_fisheries_status(mean_fsi, df_map)
+
+        st.markdown(f"""
 <div class="page-header">
-  <div class="eyebrow">🎣 Dashboard Nelayan · {mode} · {waktu_label}</div>
+  <div class="eyebrow">
+    🎣 Nelayan · 
+    <span class="mode-badge-hist">📂 HISTORIS</span>
+    &nbsp;{waktu_label}
+  </div>
   <h1>Peta Zona Tangkap — Laut Arafura</h1>
 </div>
 """, unsafe_allow_html=True)
 
-    col_s1, col_s2, col_s3, col_s4 = st.columns([2,1,1,1])
-    with col_s1:
-        st.markdown(f"""
+        col_s1, col_s2, col_s3, col_s4 = st.columns([2,1,1,1])
+        with col_s1:
+            st.markdown(f"""
 <div style="background:{status['bg']};border:1px solid {status['border']};border-left:4px solid {status['color']};border-radius:8px;padding:18px 20px;">
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Status Zona Melaut</div>
   <div style="display:flex;align-items:center;gap:10px;">
@@ -552,34 +574,37 @@ if st.session_state.role == "nelayan":
   </div>
 </div>
 """, unsafe_allow_html=True)
-    with col_s2: st.metric("Potensi Ikan (FSI)", f"{mean_fsi:.0f}", "/ 100")
-    with col_s3: st.metric("Tinggi Gelombang",   f"{df_map['gelombang'].mean():.2f}", "m")
-    with col_s4: st.metric("Kec. Arus",           f"{df_map['current_speed'].mean():.3f}", "m/s")
+        with col_s2: st.metric("Potensi Ikan (FSI)", f"{mean_fsi:.0f}", "/ 100")
+        with col_s3: st.metric("Tinggi Gelombang",   f"{df_map['gelombang'].mean():.2f}", "m")
+        with col_s4: st.metric("Kec. Arus",           f"{df_map['current_speed'].mean():.3f}", "m/s")
 
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="section-label">PETA DISTRIBUSI SPASIAL · FISHERIES INDEX</div>', unsafe_allow_html=True)
-    st.plotly_chart(render_map(df_map, "Fisheries_Index", "Turbo"), use_container_width=True)
+        tabs_n = st.tabs(["  Peta Zona Tangkap  ", "  Rose Diagram  ", "  Rekomendasi  "])
 
-    st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG</div>', unsafe_allow_html=True)
-    rc1, rc2 = st.columns(2)
-    df_rose_src = df_filter_base if not df_filter_base.empty else df
-    with rc1:
-        st.plotly_chart(make_wind_rose(df_rose_src, f"Angin · {waktu_label}"), use_container_width=True)
-    with rc2:
-        st.plotly_chart(make_wave_rose(df_rose_src, f"Gelombang · {waktu_label}"), use_container_width=True)
+        with tabs_n[0]:
+            st.markdown('<div class="section-label">DISTRIBUSI SPASIAL · FISHERIES INDEX · DATA HISTORIS</div>', unsafe_allow_html=True)
+            st.plotly_chart(render_map(df_map, "Fisheries_Index", "Turbo"), use_container_width=True)
+            st.markdown(f"""<span class="source-pill">📂 Sumber: Data Historis 2001–2020</span><span class="source-pill">📅 Periode: {waktu_label}</span>""", unsafe_allow_html=True)
 
-    col_r1, col_r2 = st.columns(2)
-    with col_r1:
-        st.markdown('<div class="section-label">REKOMENDASI ZONA</div>', unsafe_allow_html=True)
-        if status["text"] == "SANGAT BAIK":
-            st.success("**Area oranye/merah direkomendasikan.** Nutrisi laut melimpah — turunkan jaring di perairan dalam Arafura.")
-        elif status["text"] == "NORMAL":
-            st.info("**Kondisi normal.** Ikan bergerak mengikuti arus — ikuti arah arus ke tenggara.")
-        else:
-            st.warning("**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk dan muara sungai.")
-    with col_r2:
-        st.markdown('<div class="section-label">KONDISI PERAIRAN</div>', unsafe_allow_html=True)
-        st.markdown(f"""
+        with tabs_n[1]:
+            st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG</div>', unsafe_allow_html=True)
+            rc1, rc2 = st.columns(2)
+            df_rose_src = df_hist if not df_hist.empty else df
+            with rc1: st.plotly_chart(make_wind_rose(df_rose_src, f"Angin · {waktu_label}"), use_container_width=True)
+            with rc2: st.plotly_chart(make_wave_rose(df_rose_src, f"Gelombang · {waktu_label}"), use_container_width=True)
+
+        with tabs_n[2]:
+            col_r1, col_r2 = st.columns(2)
+            with col_r1:
+                st.markdown('<div class="section-label">REKOMENDASI ZONA</div>', unsafe_allow_html=True)
+                if status["text"] == "SANGAT BAIK":
+                    st.success("**Area oranye/merah direkomendasikan.** Nutrisi laut melimpah — turunkan jaring di perairan dalam Arafura.")
+                elif status["text"] == "NORMAL":
+                    st.info("**Kondisi normal.** Ikan bergerak mengikuti arus — ikuti arah arus ke tenggara.")
+                else:
+                    st.warning("**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk dan muara sungai.")
+            with col_r2:
+                st.markdown('<div class="section-label">KONDISI PERAIRAN</div>', unsafe_allow_html=True)
+                st.markdown(f"""
 <div style="background:#FFFFFF;border:1px solid #D6E4F0;border-radius:8px;padding:20px;">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <div style="text-align:center;">
@@ -594,228 +619,610 @@ if st.session_state.role == "nelayan":
 </div>
 """, unsafe_allow_html=True)
 
-# =========================================
-# DASHBOARD — AKADEMISI
-# =========================================
-else:
-    PARAM_LABELS_CLEAN = {
-        "Ocean_Health_Index":"Ocean Health Index","Fisheries_Index":"Fisheries Index",
-        "sst":"Sea Surface Temp (SST)","ssta":"SST Anomali","ph":"pH Laut",
-        "do":"Dissolved Oxygen","salinitas":"Salinitas","chla":"Klorofil-a",
-        "current_speed":"Kecepatan Arus","gelombang":"Tinggi Gelombang",
-        "angin_u":"Angin Zonal (U)","angin_v":"Angin Meridional (V)",
-    }
+    # ── AKADEMISI ────────────────────────────────────────────
+    else:
+        PARAM_LABELS_CLEAN = PARAM_LABELS
 
-    st.markdown(f"""
+        st.markdown(f"""
 <div class="page-header">
-  <div class="eyebrow">🔬 Portal Akademisi · {mode} · {waktu_label}</div>
+  <div class="eyebrow">
+    🔬 Akademisi · 
+    <span class="mode-badge-hist">📂 HISTORIS 2001–2020</span>
+    &nbsp;· {waktu_label}
+  </div>
   <h1>Analisis Parameter — {PARAM_LABELS_CLEAN.get(parameter, parameter)}</h1>
 </div>
 """, unsafe_allow_html=True)
 
-    col1,col2,col3,col4 = st.columns(4)
-    col1.metric("Rata-Rata", f"{df_map[parameter].mean():.3f}")
-    col2.metric("Minimum",   f"{df_map[parameter].min():.3f}")
-    col3.metric("Maksimum",  f"{df_map[parameter].max():.3f}")
-    col4.metric("Std. Dev",  f"{df_map[parameter].std():.3f}")
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+        col1,col2,col3,col4 = st.columns(4)
+        col1.metric("Rata-Rata", f"{df_map[parameter].mean():.3f}")
+        col2.metric("Minimum",   f"{df_map[parameter].min():.3f}")
+        col3.metric("Maksimum",  f"{df_map[parameter].max():.3f}")
+        col4.metric("Std. Dev",  f"{df_map[parameter].std():.3f}")
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        st.markdown(f"""<span class="source-pill">📂 Sumber: Data Historis 2001–2020</span><span class="source-pill">📅 Periode: {waktu_label}</span>""", unsafe_allow_html=True)
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-    PARAM_TERARAH   = ["angin_u","angin_v","gelombang"]
-    tampilkan_rose  = parameter in PARAM_TERARAH
-    tabs_labels = ["  Spasial  ","  Time Series  ","  Prediksi Prophet  ","  Statistik  ","  Korelasi  "]
-    if tampilkan_rose: tabs_labels.append("  Rose Diagram  ")
-    tabs = st.tabs(tabs_labels)
+        PARAM_TERARAH = ["angin_u","angin_v","gelombang"]
+        tampilkan_rose = parameter in PARAM_TERARAH
+        tabs_labels = ["  Spasial  ","  Time Series  ","  Statistik  ","  Korelasi  "]
+        if tampilkan_rose: tabs_labels.append("  Rose Diagram  ")
+        tabs = st.tabs(tabs_labels)
 
-    # ── Tab 0: Spasial ──────────────────────────────────────
-    with tabs[0]:
-        cmap_dict = {
-            'Fisheries_Index':'Turbo','chla':'Turbo','Ocean_Health_Index':'Blues',
-            'do':'Blues','ph':'Viridis','salinitas':'YlOrBr','sst':'Plasma',
-            'ssta':'RdBu','current_speed':'Teal',
-        }
-        cmap = cmap_dict.get(parameter, "Icefire")
-        st.markdown(f'<div class="section-label">DISTRIBUSI SPASIAL · {parameter.upper()}</div>', unsafe_allow_html=True)
-        st.plotly_chart(render_map(df_map, parameter, cmap, height=500), use_container_width=True)
-        st.markdown(f"""<span class="coord-tag">4°S – 12°S</span><span class="coord-tag">129°E – 144°E</span><span class="coord-tag">Grid 100×80 · Laut Arafura</span>""", unsafe_allow_html=True)
+        with tabs[0]:
+            cmap_dict = {
+                'Fisheries_Index':'Turbo','chla':'Turbo','Ocean_Health_Index':'Blues',
+                'do':'Blues','ph':'Viridis','salinitas':'YlOrBr','sst':'Plasma',
+                'ssta':'RdBu','current_speed':'Teal',
+            }
+            cmap = cmap_dict.get(parameter, "Icefire")
+            st.markdown(f'<div class="section-label">DISTRIBUSI SPASIAL · {parameter.upper()} · {waktu_label}</div>', unsafe_allow_html=True)
+            st.plotly_chart(render_map(df_map, parameter, cmap, height=500), use_container_width=True)
+            st.markdown(f"""<span class="coord-tag">4°S – 12°S</span><span class="coord-tag">129°E – 144°E</span><span class="coord-tag">Grid 100×80 · Laut Arafura</span>""", unsafe_allow_html=True)
 
-    # ── Tab 1: Time Series ──────────────────────────────────
-    with tabs[1]:
-        df_ts = df.groupby("time")[parameter].mean().reset_index()
-        y_vals = df_ts[parameter].to_numpy(dtype=float)
-        z = np.polyfit(range(len(df_ts)), y_vals, 1)
-        y_trend = np.poly1d(z)(range(len(df_ts)))
-        y_lo = float(min(y_vals.min(), y_trend.min()))
-        y_hi = float(max(y_vals.max(), y_trend.max()))
-        span = y_hi - y_lo
-        pad  = span * 0.08 if span > 0 else (abs(y_hi) * 0.08 if y_hi else 1.0)
+        with tabs[1]:
+            df_ts = df.groupby("time")[parameter].mean().reset_index()
+            y_vals  = df_ts[parameter].to_numpy(dtype=float)
+            z       = np.polyfit(range(len(df_ts)), y_vals, 1)
+            y_trend = np.poly1d(z)(range(len(df_ts)))
+            y_lo = float(min(y_vals.min(), y_trend.min()))
+            y_hi = float(max(y_vals.max(), y_trend.max()))
+            span = y_hi - y_lo
+            pad  = span * 0.08 if span > 0 else (abs(y_hi) * 0.08 if y_hi else 1.0)
 
-        fig_ts = go.Figure()
-        fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_vals, mode="lines",
-            name=PARAM_LABELS_CLEAN.get(parameter, parameter),
-            line=dict(color="#1E6BB8", width=1.8)))
-        fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_trend, mode="lines",
-            name="Tren Linear", line=dict(color="#D4811A", width=2, dash="dot")))
-        fig_ts.update_layout(**PLOTLY_LAYOUT,
-            title=f"Tren Temporal 2001–2020 · {PARAM_LABELS_CLEAN.get(parameter,parameter)}",
-            legend=dict(font=dict(color="#3A5070",size=11), bgcolor="rgba(255,255,255,0.9)", bordercolor="#D6E4F0", borderwidth=1),
-            height=400)
-        fig_ts.update_yaxes(range=[y_lo-pad, y_hi+pad], autorange=False)
-        st.plotly_chart(fig_ts, use_container_width=True)
-        st.caption(f"✓ Skala Y: {y_lo-pad:.3f} – {y_hi+pad:.3f}")
-
-    # ── Tab 2: Prediksi Prophet ─────────────────────────────
-    with tabs[2]:
-        st.markdown('<div class="section-label">PREDIKSI PROPHET — FORECAST 12 BULAN KE DEPAN</div>', unsafe_allow_html=True)
-
-        col_ph1, col_ph2 = st.columns([3, 1])
-        with col_ph2:
-            horizon_months_ui = st.slider("Horizon (bulan)", 3, 24, 12)
-            run_prophet = st.button("▶ Jalankan Prophet", use_container_width=True)
-
-        if run_prophet or f"prophet_{parameter}" in st.session_state:
-            with st.spinner(f"Melatih model Prophet untuk {PARAM_LABELS_CLEAN.get(parameter, parameter)}..."):
-                forecast_df, model_metrics = run_prophet_forecast(df, parameter, horizon_months_ui)
-                st.session_state[f"prophet_{parameter}"] = (forecast_df, model_metrics)
-
-        if f"prophet_{parameter}" in st.session_state:
-            forecast_df, model_metrics = st.session_state[f"prophet_{parameter}"]
-
-            # Plot forecast
-            fig_fc = go.Figure()
-            # Data historis
-            df_ts2 = df.groupby("time")[parameter].mean().reset_index()
-            fig_fc.add_trace(go.Scatter(x=df_ts2["time"], y=df_ts2[parameter],
-                mode="lines", name="Data Historis",
-                line=dict(color="#1E6BB8", width=1.5)))
-            # Prediksi
-            future_only = forecast_df[forecast_df["ds"] > df["time"].max()]
-            fig_fc.add_trace(go.Scatter(x=future_only["ds"], y=future_only["yhat"],
-                mode="lines", name="Prediksi Prophet",
-                line=dict(color="#E85A0C", width=2.5)))
-            # Confidence interval
-            fig_fc.add_trace(go.Scatter(
-                x=pd.concat([future_only["ds"], future_only["ds"][::-1]]),
-                y=pd.concat([future_only["yhat_upper"], future_only["yhat_lower"][::-1]]),
-                fill="toself", fillcolor="rgba(232,90,12,0.12)",
-                line=dict(color="rgba(255,255,255,0)"),
-                name="Interval Kepercayaan 80%"))
-            fig_fc.update_layout(**PLOTLY_LAYOUT,
-                title=f"Prediksi Prophet · {PARAM_LABELS_CLEAN.get(parameter,parameter)} · {horizon_months_ui} Bulan",
+            fig_ts = go.Figure()
+            fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_vals, mode="lines",
+                name=PARAM_LABELS_CLEAN.get(parameter, parameter),
+                line=dict(color="#1E6BB8", width=1.8)))
+            fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_trend, mode="lines",
+                name="Tren Linear", line=dict(color="#D4811A", width=2, dash="dot")))
+            fig_ts.update_layout(**PLOTLY_LAYOUT,
+                title=f"Tren Temporal 2001–2020 · {PARAM_LABELS_CLEAN.get(parameter,parameter)}",
                 legend=dict(font=dict(color="#3A5070",size=11), bgcolor="rgba(255,255,255,0.9)", bordercolor="#D6E4F0", borderwidth=1),
-                height=430)
-            with col_ph1:
-                st.plotly_chart(fig_fc, use_container_width=True)
+                height=400)
+            fig_ts.update_yaxes(range=[y_lo-pad, y_hi+pad], autorange=False)
+            st.plotly_chart(fig_ts, use_container_width=True)
+            st.caption(f"✓ Skala Y: {y_lo-pad:.3f} – {y_hi+pad:.3f} | Data historis 20 tahun (2001–2020)")
 
-            # Metrik model
-            m1,m2,m3,m4 = st.columns(4)
-            m1.metric("MAE",   f"{model_metrics['mae']:.4f}")
-            m2.metric("RMSE",  f"{model_metrics['rmse']:.4f}")
-            m3.metric("MAPE",  f"{model_metrics['mape']:.1f}%")
-            m4.metric("R²",    f"{model_metrics['r2']:.4f}")
-
-            # Tabel prediksi
-            st.markdown('<div class="section-label">TABEL PREDIKSI BULANAN</div>', unsafe_allow_html=True)
-            tbl = future_only[["ds","yhat","yhat_lower","yhat_upper"]].copy()
-            tbl.columns = ["Periode","Prediksi","Batas Bawah (80%)","Batas Atas (80%)"]
-            tbl["Periode"] = tbl["Periode"].dt.strftime("%B %Y")
-            for c in ["Prediksi","Batas Bawah (80%)","Batas Atas (80%)"]:
-                tbl[c] = tbl[c].round(4)
-            st.dataframe(tbl, use_container_width=True, hide_index=True)
-
-            # Komponen Prophet
-            st.markdown('<div class="section-label">KOMPONEN MODEL PROPHET</div>', unsafe_allow_html=True)
-            comp_cols = [c for c in ["trend","yearly","weekly"] if c in forecast_df.columns]
-            if comp_cols:
-                fig_comp = go.Figure()
-                colors_comp = ["#1E6BB8","#E85A0C","#00895A"]
-                for i, comp in enumerate(comp_cols):
-                    fig_comp.add_trace(go.Scatter(
-                        x=forecast_df["ds"], y=forecast_df[comp],
-                        mode="lines", name=comp.capitalize(),
-                        line=dict(color=colors_comp[i % len(colors_comp)], width=1.8)))
-                fig_comp.update_layout(**PLOTLY_LAYOUT, height=300,
-                    title="Dekomposisi Komponen Model",
-                    legend=dict(font=dict(color="#3A5070",size=11)))
-                st.plotly_chart(fig_comp, use_container_width=True)
-        else:
-            st.info("Klik **▶ Jalankan Prophet** untuk memulai prediksi.")
-            st.markdown("""
-<div class="data-note">Model Prophet akan dilatih pada data historis 2001–2020 dan memproyeksikan nilai parameter ke depan. Proses sekitar 5–15 detik per parameter.</div>
-""", unsafe_allow_html=True)
-
-    # ── Tab 3: Statistik ────────────────────────────────────
-    with tabs[3]:
-        desc = df_map[[parameter]].describe()
-        st.markdown('<div class="section-label">STATISTIK DESKRIPTIF · AREA SPASIAL AKTIF</div>', unsafe_allow_html=True)
-        stats_cols = st.columns(4)
-        for i, (label, key, icon) in enumerate([
-            ("Count","count","N"),("Mean","mean","μ"),("Std","std","σ"),("Min","min","↓"),
-        ]):
-            val = f"{int(desc.loc[key, parameter]):,}" if key == "count" else f"{desc.loc[key, parameter]:.4f}"
-            stats_cols[i].markdown(f"""
+        with tabs[2]:
+            desc = df_map[[parameter]].describe()
+            st.markdown('<div class="section-label">STATISTIK DESKRIPTIF · AREA SPASIAL AKTIF</div>', unsafe_allow_html=True)
+            stats_cols = st.columns(4)
+            for i, (label, key, icon) in enumerate([
+                ("Count","count","N"),("Mean","mean","μ"),("Std","std","σ"),("Min","min","↓"),
+            ]):
+                val = f"{int(desc.loc[key, parameter]):,}" if key == "count" else f"{desc.loc[key, parameter]:.4f}"
+                stats_cols[i].markdown(f"""
 <div style="background:#FFFFFF;border:1px solid #D6E4F0;border-radius:8px;padding:18px;text-align:center;">
   <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#1E6BB8;margin-bottom:4px;">{icon}</div>
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;letter-spacing:0.1em;text-transform:uppercase;">{label}</div>
   <div style="font-size:18px;font-weight:700;color:#0D1F33;margin-top:4px;">{val}</div>
 </div>
 """, unsafe_allow_html=True)
-        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-        stats_cols2 = st.columns(3)
-        for i, (label, key) in enumerate([("25th Percentile","25%"),("Median (50%)","50%"),("75th Percentile","75%")]):
-            stats_cols2[i].markdown(f"""
+            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+            stats_cols2 = st.columns(3)
+            for i, (label, key) in enumerate([("25th Percentile","25%"),("Median (50%)","50%"),("75th Percentile","75%")]):
+                stats_cols2[i].markdown(f"""
 <div style="background:#FFFFFF;border:1px solid #D6E4F0;border-radius:8px;padding:18px;text-align:center;">
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">{label}</div>
   <div style="font-size:18px;font-weight:700;color:#0D1F33;">{desc.loc[key, parameter]:.4f}</div>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Tab 4: Korelasi ─────────────────────────────────────
-    with tabs[4]:
-        DROP_COLS = ["year","month","lat","lon","latitude","longitude","index","time","id"]
-        numeric_df = df.select_dtypes(include=np.number).drop(columns=DROP_COLS, errors="ignore")
-        SHORT_CORR = {
-            "uo":"UO","vo":"VO","sst":"SST","ssta":"SSTA","ph":"pH","do":"DO",
-            "salinitas":"SAL","chla":"CHL-a","gelombang":"WAVE","current_speed":"CurSpd",
-            "angin_u":"WindU","angin_v":"WindV","Ocean_Health_Index":"OHI","Fisheries_Index":"FSI",
-        }
-        corr = numeric_df.corr().rename(index=SHORT_CORR, columns=SHORT_CORR)
-        labels = list(corr.columns)
-        n = len(labels); vals = corr.values
-        zmin, zmax = float(np.nanmin(vals)), float(np.nanmax(vals))
-        rng_z = (zmax - zmin) or 1.0
-        fig_corr = go.Figure(go.Heatmap(
-            z=vals, x=labels, y=labels,
-            colorscale=[[0,"#EBF3FB"],[0.5,"#5A9EC8"],[1,"#0D1F33"]],
-            zmin=zmin, zmax=zmax, xgap=3, ygap=3,
-            hovertemplate="%{y} × %{x}: %{z:.2f}<extra></extra>",
-            colorbar=dict(thickness=12, len=0.7, tickfont=dict(size=10, family="JetBrains Mono", color="#0D1F33")),
-        ))
-        annotations = []
-        for i in range(n):
-            for j in range(n):
-                v = vals[i,j]; frac = (v-zmin)/rng_z
-                annotations.append(dict(x=labels[j], y=labels[i], text=f"{v:.2f}", showarrow=False,
-                    font=dict(size=10, color="#FFFFFF" if frac > 0.55 else "#0D1F33", family="JetBrains Mono")))
-        chart_h = max(560, 46*n+170)
-        fig_corr.update_layout(
-            annotations=annotations,
-            title=dict(text="Matriks Korelasi Pearson — Parameter Oseanografi",
-                font=dict(color="#0D1F33",size=15,family="Inter"), x=0.01),
-            paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", height=chart_h,
-            margin=dict(l=10,r=10,t=60,b=10),
-            xaxis=dict(tickangle=45, side="bottom", tickfont=dict(size=12,color="#0D1F33",family="Inter")),
-            yaxis=dict(autorange="reversed", tickfont=dict(size=12,color="#0D1F33",family="Inter")),
-        )
-        st.plotly_chart(fig_corr, use_container_width=True)
+        with tabs[3]:
+            DROP_COLS = ["year","month","lat","lon","latitude","longitude","index","time","id"]
+            numeric_df = df.select_dtypes(include=np.number).drop(columns=DROP_COLS, errors="ignore")
+            SHORT_CORR = {
+                "uo":"UO","vo":"VO","sst":"SST","ssta":"SSTA","ph":"pH","do":"DO",
+                "salinitas":"SAL","chla":"CHL-a","gelombang":"WAVE","current_speed":"CurSpd",
+                "angin_u":"WindU","angin_v":"WindV","Ocean_Health_Index":"OHI","Fisheries_Index":"FSI",
+            }
+            corr = numeric_df.corr().rename(index=SHORT_CORR, columns=SHORT_CORR)
+            labels = list(corr.columns)
+            n = len(labels); vals = corr.values
+            zmin, zmax = float(np.nanmin(vals)), float(np.nanmax(vals))
+            rng_z = (zmax - zmin) or 1.0
+            fig_corr = go.Figure(go.Heatmap(
+                z=vals, x=labels, y=labels,
+                colorscale=[[0,"#EBF3FB"],[0.5,"#5A9EC8"],[1,"#0D1F33"]],
+                zmin=zmin, zmax=zmax, xgap=3, ygap=3,
+                hovertemplate="%{y} × %{x}: %{z:.2f}<extra></extra>",
+                colorbar=dict(thickness=12, len=0.7, tickfont=dict(size=10, family="JetBrains Mono", color="#0D1F33")),
+            ))
+            annotations = []
+            for i in range(n):
+                for j in range(n):
+                    v = vals[i,j]; frac = (v-zmin)/rng_z
+                    annotations.append(dict(x=labels[j], y=labels[i], text=f"{v:.2f}", showarrow=False,
+                        font=dict(size=10, color="#FFFFFF" if frac > 0.55 else "#0D1F33", family="JetBrains Mono")))
+            chart_h = max(560, 46*n+170)
+            fig_corr.update_layout(
+                annotations=annotations,
+                title=dict(text="Matriks Korelasi Pearson — Parameter Oseanografi (Data Historis 2001–2020)",
+                    font=dict(color="#0D1F33",size=15,family="Inter"), x=0.01),
+                paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", height=chart_h,
+                margin=dict(l=10,r=10,t=60,b=10),
+                xaxis=dict(tickangle=45, side="bottom", tickfont=dict(size=12,color="#0D1F33",family="Inter")),
+                yaxis=dict(autorange="reversed", tickfont=dict(size=12,color="#0D1F33",family="Inter")),
+            )
+            st.plotly_chart(fig_corr, use_container_width=True)
 
-    # ── Tab 5: Rose Diagram (opsional) ──────────────────────
-    if tampilkan_rose:
-        with tabs[5]:
-            st.markdown('<div class="section-label">ROSE DIAGRAM — DISTRIBUSI ARAH & INTENSITAS</div>', unsafe_allow_html=True)
-            df_rose_src = df_filter_base if not df_filter_base.empty else df
-            if parameter in ("angin_u","angin_v"):
-                st.plotly_chart(make_wind_rose(df_rose_src, f"Angin · {waktu_label}"), use_container_width=True)
-                st.markdown('<div class="data-note">Rose diagram angin menggunakan konvensi meteorologis (arah dari mana angin datang).</div>', unsafe_allow_html=True)
+        if tampilkan_rose:
+            with tabs[4]:
+                st.markdown('<div class="section-label">ROSE DIAGRAM — DISTRIBUSI ARAH & INTENSITAS</div>', unsafe_allow_html=True)
+                df_rose_src = df_hist if not df_hist.empty else df
+                if parameter in ("angin_u","angin_v"):
+                    st.plotly_chart(make_wind_rose(df_rose_src, f"Angin · {waktu_label}"), use_container_width=True)
+                    st.markdown('<div class="data-note">Rose diagram angin menggunakan konvensi meteorologis (arah dari mana angin datang).</div>', unsafe_allow_html=True)
+                else:
+                    st.plotly_chart(make_wave_rose(df_rose_src, f"Gelombang · {waktu_label}"), use_container_width=True)
+                    st.markdown('<div class="data-note">Rose diagram gelombang menggunakan tinggi gelombang dengan proxy arah arus permukaan (uo, vo).</div>', unsafe_allow_html=True)
+
+# =========================================
+# =====================================================================
+#   MODE: REAL TIME
+#   Hanya tampil setelah tombol "Muat Data" diklik dan berhasil/gagal
+# =====================================================================
+# =========================================
+elif mode == "Real Time":
+
+    now_utc = datetime.datetime.utcnow()
+    now_wib = now_utc + datetime.timedelta(hours=7)
+
+    # ── Belum pernah diklik ──────────────────────────────────
+    if st.session_state.last_update is None:
+        st.markdown("""
+<div class="page-header">
+  <div class="eyebrow">🛰 Mode Real-Time — Laut Arafura</div>
+  <h1>Data Oseanografi Terkini</h1>
+</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("""
+<div class="rt-empty-box">
+  <div style="font-size:48px;margin-bottom:16px;">🛰</div>
+  <div style="font-size:18px;font-weight:700;color:#0D1F33;margin-bottom:8px;">Belum Ada Data Real-Time</div>
+  <div style="color:#5A7FA0;font-size:14px;margin-bottom:24px;line-height:1.6;">
+    Klik tombol <b>🔄 Muat Data Real-Time Sekarang</b> di sidebar kiri<br>
+    untuk mengambil data terbaru dari keempat sumber API.
+  </div>
+  <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+    <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;">🌊 CMEMS · Arus/SST/Salinitas</span>
+    <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;">🛰 NASA MODIS · Klorofil-a</span>
+    <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;">💨 ERA5/ECMWF · Angin</span>
+    <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;">🌧 BMKG · Gelombang</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+        st.stop()
+
+    # ── Sudah diklik — tentukan sumber data yg dipakai ──────
+    wib_str = now_wib.strftime('%d %b %Y %H:%M') + " WIB"
+    update_wib = (st.session_state.last_update + datetime.timedelta(hours=7)).strftime('%d %b %Y %H:%M') + " WIB"
+
+    # Hitung berapa API berhasil
+    n_ok  = sum(1 for v in st.session_state.api_status.values() if v)
+    n_all = len(st.session_state.api_status)
+
+    if st.session_state.rt_data is not None:
+        df_rt = st.session_state.rt_data
+        data_label   = f"Real-Time · {update_wib}"
+        sumber_badge = "🟢 Data langsung dari API"
+        is_live      = True
+    else:
+        # Fallback klimatologis bulan ini — JELAS diberi label
+        df_rt      = df[df["month"] == now_utc.month].copy()
+        data_label = f"Estimasi Klimatologis · Bulan {now_utc.month} (API tidak tersedia)"
+        sumber_badge = "🟡 Estimasi klimatologis (API gagal)"
+        is_live    = False
+
+    df_map_rt = build_map_from_df(df_rt)
+
+    # ── NELAYAN · REAL TIME ──────────────────────────────────
+    if st.session_state.role == "nelayan":
+        mean_fsi = float(df_map_rt["Fisheries_Index"].mean())
+        status   = get_fisheries_status(mean_fsi, df_map_rt)
+
+        st.markdown(f"""
+<div class="page-header">
+  <div class="eyebrow">
+    🎣 Nelayan · 
+    <span class="update-badge"><span class="pulse"></span> REAL-TIME</span>
+    &nbsp; Diperbarui: {update_wib}
+  </div>
+  <h1>Kondisi Laut Sekarang — Laut Arafura</h1>
+</div>
+""", unsafe_allow_html=True)
+
+        # Banner sumber data
+        if is_live:
+            st.markdown(f"""
+<div style="background:#EDFAF3;border:1px solid #9FD9BE;border-left:4px solid #00895A;border-radius:6px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00895A;">
+  🟢 Data diambil langsung dari API ({n_ok}/{n_all} API aktif) · Terakhir diperbarui: {update_wib}
+</div>
+""", unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+<div style="background:#FEF6E8;border:1px solid #F0C070;border-left:4px solid #D4811A;border-radius:6px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a5a00;">
+  🟡 API tidak merespons — menampilkan estimasi klimatologis historis untuk bulan {now_utc.strftime('%B')}. Coba muat ulang.
+</div>
+""", unsafe_allow_html=True)
+
+        col_s1, col_s2, col_s3, col_s4 = st.columns([2,1,1,1])
+        with col_s1:
+            st.markdown(f"""
+<div style="background:{status['bg']};border:1px solid {status['border']};border-left:4px solid {status['color']};border-radius:8px;padding:18px 20px;">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Status Zona Melaut Hari Ini</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:20px;">{status['icon']}</span>
+    <span style="color:{status['color']};font-size:20px;font-weight:700;">{status['text']}</span>
+    <span style="font-family:'JetBrains Mono',monospace;color:#8ABDD4;font-size:12px;">FSI {mean_fsi:.1f}/100</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+        with col_s2: st.metric("Potensi Ikan (FSI)", f"{mean_fsi:.0f}", "/ 100")
+        with col_s3: st.metric("Tinggi Gelombang",   f"{df_map_rt['gelombang'].mean():.2f}", "m")
+        with col_s4: st.metric("Kec. Arus",           f"{df_map_rt['current_speed'].mean():.3f}", "m/s")
+
+        tabs_rt = st.tabs(["  Peta Kondisi Terkini  ", "  Detail Parameter  ", "  Rose Diagram  ", "  Rekomendasi  "])
+
+        with tabs_rt[0]:
+            st.markdown(f'<div class="section-label">FISHERIES INDEX · {data_label}</div>', unsafe_allow_html=True)
+            st.plotly_chart(render_map(df_map_rt, "Fisheries_Index", "Turbo"), use_container_width=True)
+            st.markdown(f"""
+<span class="source-pill">🛰 {sumber_badge}</span>
+<span class="source-pill">📅 {update_wib}</span>
+<span class="source-pill">🌊 Laut Arafura 4°S–12°S / 129°E–144°E</span>
+""", unsafe_allow_html=True)
+
+        with tabs_rt[1]:
+            st.markdown('<div class="section-label">KONDISI OSEANOGRAFI TERKINI</div>', unsafe_allow_html=True)
+            param_rt_list = [
+                ("🌡 SST", f"{df_map_rt['sst'].mean():.2f} °C", "CMEMS" if is_live else "Estimasi"),
+                ("🧪 Salinitas", f"{df_map_rt['salinitas'].mean():.2f} PSU", "CMEMS" if is_live else "Estimasi"),
+                ("🌿 Klorofil-a", f"{df_map_rt['chla'].mean():.3f} mg/m³", "NASA MODIS" if is_live else "Estimasi"),
+                ("💧 Dissolved O₂", f"{df_map_rt['do'].mean():.2f} mg/L", "Derivasi" ),
+                ("🌊 Gelombang", f"{df_map_rt['gelombang'].mean():.2f} m", "BMKG" if is_live else "Estimasi"),
+                ("💨 Angin U", f"{df_map_rt['angin_u'].mean():.2f} m/s", "ERA5" if is_live else "Estimasi"),
+            ]
+            cols_rt = st.columns(3)
+            for idx, (label, val, src) in enumerate(param_rt_list):
+                with cols_rt[idx % 3]:
+                    st.markdown(f"""
+<div style="background:#FFFFFF;border:1px solid #D6E4F0;border-radius:8px;padding:16px;margin-bottom:12px;">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;text-transform:uppercase;letter-spacing:0.1em;">{label}</div>
+  <div style="font-size:20px;font-weight:700;color:#0D1F33;margin:6px 0 4px;">{val}</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#{'00895A' if is_live else 'D4811A'};">{'🟢' if is_live else '🟡'} {src}</div>
+</div>
+""", unsafe_allow_html=True)
+
+        with tabs_rt[2]:
+            st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG TERKINI</div>', unsafe_allow_html=True)
+            rc1, rc2 = st.columns(2)
+            with rc1: st.plotly_chart(make_wind_rose(df_rt, f"Angin · {data_label}"), use_container_width=True)
+            with rc2: st.plotly_chart(make_wave_rose(df_rt, f"Gelombang · {data_label}"), use_container_width=True)
+
+        with tabs_rt[3]:
+            col_r1, col_r2 = st.columns(2)
+            with col_r1:
+                st.markdown('<div class="section-label">REKOMENDASI ZONA</div>', unsafe_allow_html=True)
+                if status["text"] == "SANGAT BAIK":
+                    st.success("**Area oranye/merah direkomendasikan.** Nutrisi laut melimpah — turunkan jaring di perairan dalam Arafura.")
+                elif status["text"] == "NORMAL":
+                    st.info("**Kondisi normal.** Ikan bergerak mengikuti arus — ikuti arah arus ke tenggara.")
+                else:
+                    st.warning("**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk dan muara sungai.")
+            with col_r2:
+                st.markdown('<div class="section-label">SST TERKINI</div>', unsafe_allow_html=True)
+                st.plotly_chart(render_map(df_map_rt, "sst", "Plasma", height=300), use_container_width=True)
+
+    # ── AKADEMISI · REAL TIME ────────────────────────────────
+    else:
+        st.markdown(f"""
+<div class="page-header">
+  <div class="eyebrow">
+    🔬 Akademisi · 
+    <span class="update-badge"><span class="pulse"></span> REAL-TIME</span>
+    &nbsp; Diperbarui: {update_wib}
+  </div>
+  <h1>Data Terkini — {PARAM_LABELS.get(parameter, parameter)}</h1>
+</div>
+""", unsafe_allow_html=True)
+
+        if is_live:
+            st.markdown(f"""
+<div style="background:#EDFAF3;border:1px solid #9FD9BE;border-left:4px solid #00895A;border-radius:6px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00895A;">
+  🟢 {n_ok}/{n_all} API berhasil terhubung · Data diperbarui: {update_wib}
+  &nbsp;&nbsp;|&nbsp;&nbsp; CMEMS · NASA MODIS · ERA5 · BMKG
+</div>
+""", unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+<div style="background:#FEF6E8;border:1px solid #F0C070;border-left:4px solid #D4811A;border-radius:6px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a5a00;">
+  🟡 Semua API tidak merespons · Menampilkan estimasi klimatologis bulan {now_utc.strftime('%B')} · Coba tekan 🔄 Muat Ulang di sidebar
+</div>
+""", unsafe_allow_html=True)
+
+        col1,col2,col3,col4 = st.columns(4)
+        col1.metric("Rata-Rata", f"{df_map_rt[parameter].mean():.3f}")
+        col2.metric("Minimum",   f"{df_map_rt[parameter].min():.3f}")
+        col3.metric("Maksimum",  f"{df_map_rt[parameter].max():.3f}")
+        col4.metric("Std. Dev",  f"{df_map_rt[parameter].std():.3f}")
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+        PARAM_TERARAH = ["angin_u","angin_v","gelombang"]
+        tampilkan_rose = parameter in PARAM_TERARAH
+        tabs_labels_rt = ["  Spasial Terkini  ","  Perbandingan Historis  ","  Statistik  "]
+        if tampilkan_rose: tabs_labels_rt.append("  Rose Diagram  ")
+        tabs_rt_ak = st.tabs(tabs_labels_rt)
+
+        with tabs_rt_ak[0]:
+            cmap_dict = {
+                'Fisheries_Index':'Turbo','chla':'Turbo','Ocean_Health_Index':'Blues',
+                'do':'Blues','ph':'Viridis','salinitas':'YlOrBr','sst':'Plasma',
+                'ssta':'RdBu','current_speed':'Teal',
+            }
+            cmap = cmap_dict.get(parameter, "Icefire")
+            st.markdown(f'<div class="section-label">DISTRIBUSI SPASIAL · {parameter.upper()} · {data_label}</div>', unsafe_allow_html=True)
+            st.plotly_chart(render_map(df_map_rt, parameter, cmap, height=500), use_container_width=True)
+            st.markdown(f"""<span class="source-pill">🛰 {sumber_badge}</span><span class="source-pill">📅 {update_wib}</span>""", unsafe_allow_html=True)
+
+        with tabs_rt_ak[1]:
+            # Bandingkan nilai RT vs rata-rata historis bulan yang sama
+            hist_same_month = df[df["month"] == now_utc.month][parameter]
+            rt_val   = df_map_rt[parameter].mean()
+            hist_val = hist_same_month.mean()
+            delta    = rt_val - hist_val
+            delta_pct = (delta / hist_val * 100) if hist_val != 0 else 0
+
+            st.markdown(f'<div class="section-label">NILAI TERKINI vs RATA-RATA HISTORIS BULAN {now_utc.strftime("%B").upper()}</div>', unsafe_allow_html=True)
+            c1c, c2c, c3c = st.columns(3)
+            c1c.metric("Nilai Terkini",     f"{rt_val:.4f}",   f"{'+' if delta >= 0 else ''}{delta:.4f} vs historis")
+            c2c.metric("Rata-Rata Historis",f"{hist_val:.4f}", f"Bulan {now_utc.strftime('%B')} (2001–2020)")
+            c3c.metric("Deviasi (%)",       f"{delta_pct:+.2f}%", "terhadap klimatologi")
+
+            # Time series historis + garis nilai RT
+            df_ts_rt = df.groupby("time")[parameter].mean().reset_index()
+            fig_compare = go.Figure()
+            fig_compare.add_trace(go.Scatter(
+                x=df_ts_rt["time"], y=df_ts_rt[parameter].to_numpy(dtype=float),
+                mode="lines", name="Historis 2001–2020",
+                line=dict(color="#A8C8E8", width=1.5)))
+            fig_compare.add_hline(
+                y=rt_val, line_color="#E85A0C", line_width=2.5, line_dash="dash",
+                annotation_text=f"Nilai RT: {rt_val:.3f}",
+                annotation_font=dict(color="#E85A0C", size=11))
+            fig_compare.update_layout(**PLOTLY_LAYOUT,
+                title=f"Posisi Nilai Terkini vs Klimatologi · {PARAM_LABELS.get(parameter,parameter)}",
+                height=380)
+            st.plotly_chart(fig_compare, use_container_width=True)
+
+        with tabs_rt_ak[2]:
+            desc = df_map_rt[[parameter]].describe()
+            st.markdown('<div class="section-label">STATISTIK DESKRIPTIF · DATA TERKINI</div>', unsafe_allow_html=True)
+            sc = st.columns(4)
+            for i, (label, key, icon) in enumerate([
+                ("Count","count","N"),("Mean","mean","μ"),("Std","std","σ"),("Min","min","↓"),
+            ]):
+                val = f"{int(desc.loc[key, parameter]):,}" if key == "count" else f"{desc.loc[key, parameter]:.4f}"
+                sc[i].markdown(f"""
+<div style="background:#FFFFFF;border:1px solid #D6E4F0;border-radius:8px;padding:18px;text-align:center;">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#1E6BB8;margin-bottom:4px;">{icon}</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;letter-spacing:0.1em;text-transform:uppercase;">{label}</div>
+  <div style="font-size:18px;font-weight:700;color:#0D1F33;margin-top:4px;">{val}</div>
+</div>
+""", unsafe_allow_html=True)
+
+        if tampilkan_rose:
+            with tabs_rt_ak[3]:
+                st.markdown('<div class="section-label">ROSE DIAGRAM — DATA TERKINI</div>', unsafe_allow_html=True)
+                rc1, rc2 = st.columns(2)
+                with rc1: st.plotly_chart(make_wind_rose(df_rt, f"Angin · {data_label}"), use_container_width=True)
+                with rc2: st.plotly_chart(make_wave_rose(df_rt, f"Gelombang · {data_label}"), use_container_width=True)
+
+# =========================================
+# =====================================================================
+#   MODE: PREDIKSI
+#   Khusus Prophet — tidak ada data historis di sini
+# =====================================================================
+# =========================================
+elif mode == "Prediksi":
+
+    if st.session_state.role == "nelayan":
+        # ── NELAYAN · PREDIKSI ───────────────────────────────
+        st.markdown(f"""
+<div class="page-header">
+  <div class="eyebrow">🎣 Nelayan · <span class="mode-badge-pred">🤖 PREDIKSI PROPHET</span> &nbsp;· {bulan_pred}</div>
+  <h1>Proyeksi Kondisi Laut — {bulan_pred}</h1>
+</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("""
+<div class="data-note">Model Prophet dilatih pada 20 tahun data historis (2001–2020). Proyeksi untuk parameter kunci perikanan.</div>
+""", unsafe_allow_html=True)
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+        run_pred_nelayan = st.button("▶ Jalankan Prediksi untuk Bulan Ini", use_container_width=False)
+
+        KEY_PARAMS_NELAYAN = ["Fisheries_Index","chla","gelombang","current_speed"]
+        KEY_LABELS_NELAYAN = ["Fisheries Index","Klorofil-a","Tinggi Gelombang","Kecepatan Arus"]
+
+        if run_pred_nelayan:
+            with st.spinner("Melatih model Prophet..."):
+                for kp in KEY_PARAMS_NELAYAN:
+                    fc, metrics = run_prophet_forecast(df, kp, 12)
+                    st.session_state[f"prophet_nelayan_{kp}"] = (fc, metrics)
+
+        results_ready = all(f"prophet_nelayan_{kp}" in st.session_state for kp in KEY_PARAMS_NELAYAN)
+
+        if results_ready:
+            cols_pred = st.columns(4)
+            for idx, kp in enumerate(KEY_PARAMS_NELAYAN):
+                fc, metrics = st.session_state[f"prophet_nelayan_{kp}"]
+                future_only = fc[fc["ds"] > df["time"].max()]
+                # Ambil baris untuk bulan prediksi yg dipilih
+                target_row = future_only[future_only["ds"].dt.month == month_idx_pred]
+                if not target_row.empty:
+                    pred_val = float(target_row["yhat"].iloc[0])
+                    lo_val   = float(target_row["yhat_lower"].iloc[0])
+                    hi_val   = float(target_row["yhat_upper"].iloc[0])
+                    cols_pred[idx].metric(
+                        KEY_LABELS_NELAYAN[idx],
+                        f"{pred_val:.3f}",
+                        f"± {(hi_val - lo_val)/2:.3f}"
+                    )
+
+            # Plot FSI forecast
+            fc_fsi, _ = st.session_state["prophet_nelayan_Fisheries_Index"]
+            future_only = fc_fsi[fc_fsi["ds"] > df["time"].max()]
+            fig_fsi_pred = go.Figure()
+            df_ts_fsi = df.groupby("time")["Fisheries_Index"].mean().reset_index()
+            fig_fsi_pred.add_trace(go.Scatter(
+                x=df_ts_fsi["time"], y=df_ts_fsi["Fisheries_Index"].to_numpy(dtype=float),
+                mode="lines", name="Historis", line=dict(color="#A8C8E8", width=1.5)))
+            fig_fsi_pred.add_trace(go.Scatter(
+                x=future_only["ds"], y=future_only["yhat"],
+                mode="lines", name="Prediksi Prophet",
+                line=dict(color="#E85A0C", width=2.5)))
+            fig_fsi_pred.add_trace(go.Scatter(
+                x=pd.concat([future_only["ds"], future_only["ds"][::-1]]),
+                y=pd.concat([future_only["yhat_upper"], future_only["yhat_lower"][::-1]]),
+                fill="toself", fillcolor="rgba(232,90,12,0.12)",
+                line=dict(color="rgba(255,255,255,0)"), name="Interval 80%"))
+            fig_fsi_pred.update_layout(**PLOTLY_LAYOUT,
+                title=f"Prediksi Fisheries Index · {bulan_pred}",
+                height=380)
+            st.plotly_chart(fig_fsi_pred, use_container_width=True)
+
+            # Rekomendasi berdasarkan nilai prediksi FSI
+            fsi_pred = float(fc_fsi[fc_fsi["ds"].dt.month == month_idx_pred]["yhat"].iloc[0]) \
+                if not fc_fsi[fc_fsi["ds"].dt.month == month_idx_pred].empty else 50.0
+            fsi_p25 = df["Fisheries_Index"].quantile(0.25)
+            fsi_p75 = df["Fisheries_Index"].quantile(0.75)
+            st.markdown('<div class="section-label">PROYEKSI REKOMENDASI</div>', unsafe_allow_html=True)
+            if fsi_pred >= fsi_p75:
+                st.success(f"**Proyeksi {bulan_pred}: SANGAT BAIK (FSI {fsi_pred:.1f}/100).** Kondisi laut diprediksi mendukung penangkapan optimal.")
+            elif fsi_pred >= fsi_p25:
+                st.info(f"**Proyeksi {bulan_pred}: NORMAL (FSI {fsi_pred:.1f}/100).** Tangkapan diperkirakan rata-rata.")
             else:
-                st.plotly_chart(make_wave_rose(df_rose_src, f"Gelombang · {waktu_label}"), use_container_width=True)
-                st.markdown('<div class="data-note">Rose diagram gelombang menggunakan tinggi gelombang dengan proxy arah arus permukaan (uo, vo).</div>', unsafe_allow_html=True)
+                st.warning(f"**Proyeksi {bulan_pred}: WASPADA (FSI {fsi_pred:.1f}/100).** Pertimbangkan mengurangi aktivitas melaut jauh.")
+        else:
+            st.info("Klik **▶ Jalankan Prediksi** untuk melihat proyeksi kondisi laut.")
+
+    else:
+        # ── AKADEMISI · PREDIKSI ─────────────────────────────
+        st.markdown(f"""
+<div class="page-header">
+  <div class="eyebrow">🔬 Akademisi · <span class="mode-badge-pred">🤖 PREDIKSI PROPHET</span> &nbsp;· {bulan_pred}</div>
+  <h1>Model Prediksi — {PARAM_LABELS.get(parameter, parameter)}</h1>
+</div>
+""", unsafe_allow_html=True)
+
+        st.markdown("""
+<div class="data-note">Model Prophet (Meta/Facebook) dilatih pada data historis 2001–2020. Prediksi mencakup tren, seasonalitas tahunan, dan interval kepercayaan 80%.</div>
+""", unsafe_allow_html=True)
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+        col_ph1, col_ph2 = st.columns([3, 1])
+        with col_ph2:
+            horizon_months_ui = st.slider("Horizon (bulan)", 3, 24, 12)
+            run_prophet = st.button("▶ Jalankan Prophet", use_container_width=True)
+
+        prophet_key = f"prophet_{parameter}_{horizon_months_ui}"
+
+        if run_prophet:
+            with st.spinner(f"Melatih model Prophet untuk {PARAM_LABELS.get(parameter, parameter)}..."):
+                forecast_df, model_metrics = run_prophet_forecast(df, parameter, horizon_months_ui)
+                st.session_state[prophet_key] = (forecast_df, model_metrics)
+
+        if prophet_key in st.session_state:
+            forecast_df, model_metrics = st.session_state[prophet_key]
+
+            tabs_pred = st.tabs(["  Grafik Prediksi  ","  Komponen Model  ","  Tabel Prediksi  ","  Metrik Akurasi  "])
+
+            with tabs_pred[0]:
+                fig_fc = go.Figure()
+                df_ts2 = df.groupby("time")[parameter].mean().reset_index()
+                fig_fc.add_trace(go.Scatter(
+                    x=df_ts2["time"], y=df_ts2[parameter].to_numpy(dtype=float),
+                    mode="lines", name="Data Historis (2001–2020)",
+                    line=dict(color="#1E6BB8", width=1.5)))
+                future_only = forecast_df[forecast_df["ds"] > df["time"].max()]
+                fig_fc.add_trace(go.Scatter(
+                    x=future_only["ds"], y=future_only["yhat"],
+                    mode="lines", name="Prediksi Prophet",
+                    line=dict(color="#E85A0C", width=2.5)))
+                fig_fc.add_trace(go.Scatter(
+                    x=pd.concat([future_only["ds"], future_only["ds"][::-1]]),
+                    y=pd.concat([future_only["yhat_upper"], future_only["yhat_lower"][::-1]]),
+                    fill="toself", fillcolor="rgba(232,90,12,0.12)",
+                    line=dict(color="rgba(255,255,255,0)"),
+                    name="Interval Kepercayaan 80%"))
+                # Tandai bulan target
+                target_rows = future_only[future_only["ds"].dt.month == month_idx_pred]
+                if not target_rows.empty:
+                    fig_fc.add_trace(go.Scatter(
+                        x=target_rows["ds"], y=target_rows["yhat"],
+                        mode="markers", name=f"Target: {bulan_pred}",
+                        marker=dict(color="#E85A0C", size=10, symbol="star")))
+                fig_fc.update_layout(**PLOTLY_LAYOUT,
+                    title=f"Prediksi Prophet · {PARAM_LABELS.get(parameter,parameter)} · Horizon {horizon_months_ui} Bulan",
+                    legend=dict(font=dict(color="#3A5070",size=11), bgcolor="rgba(255,255,255,0.9)", bordercolor="#D6E4F0", borderwidth=1),
+                    height=430)
+                with col_ph1:
+                    st.plotly_chart(fig_fc, use_container_width=True)
+
+                # Nilai prediksi untuk bulan target
+                if not target_rows.empty:
+                    tv = float(target_rows["yhat"].iloc[0])
+                    tl = float(target_rows["yhat_lower"].iloc[0])
+                    tu = float(target_rows["yhat_upper"].iloc[0])
+                    st.markdown(f"""
+<div style="background:#FEF6E8;border:1px solid #F0C070;border-left:4px solid #D4811A;border-radius:6px;padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#8a5a00;">
+  ⭐ Nilai Prediksi untuk <b>{bulan_pred}</b>: <b>{tv:.4f}</b> &nbsp;|&nbsp; Interval 80%: [{tl:.4f} — {tu:.4f}]
+</div>
+""", unsafe_allow_html=True)
+
+            with tabs_pred[1]:
+                comp_cols = [c for c in ["trend","yearly","weekly"] if c in forecast_df.columns]
+                if comp_cols:
+                    fig_comp = go.Figure()
+                    colors_comp = ["#1E6BB8","#E85A0C","#00895A"]
+                    for i, comp in enumerate(comp_cols):
+                        fig_comp.add_trace(go.Scatter(
+                            x=forecast_df["ds"], y=forecast_df[comp],
+                            mode="lines", name=comp.capitalize(),
+                            line=dict(color=colors_comp[i % len(colors_comp)], width=1.8)))
+                    fig_comp.update_layout(**PLOTLY_LAYOUT, height=340,
+                        title=f"Dekomposisi Komponen Prophet · {PARAM_LABELS.get(parameter,parameter)}",
+                        legend=dict(font=dict(color="#3A5070",size=11)))
+                    st.plotly_chart(fig_comp, use_container_width=True)
+                    st.markdown("""
+<div class="data-note">Trend: arah jangka panjang · Yearly: pola musiman tahunan · Weekly: pola harian (jika ada)</div>
+""", unsafe_allow_html=True)
+
+            with tabs_pred[2]:
+                st.markdown('<div class="section-label">TABEL PREDIKSI BULANAN</div>', unsafe_allow_html=True)
+                tbl = future_only[["ds","yhat","yhat_lower","yhat_upper"]].copy()
+                tbl.columns = ["Periode","Prediksi","Batas Bawah (80%)","Batas Atas (80%)"]
+                tbl["Periode"] = tbl["Periode"].dt.strftime("%B %Y")
+                for c in ["Prediksi","Batas Bawah (80%)","Batas Atas (80%)"]:
+                    tbl[c] = tbl[c].round(4)
+                st.dataframe(tbl, use_container_width=True, hide_index=True)
+
+            with tabs_pred[3]:
+                st.markdown('<div class="section-label">METRIK AKURASI MODEL</div>', unsafe_allow_html=True)
+                m1,m2,m3,m4 = st.columns(4)
+                m1.metric("MAE",  f"{model_metrics['mae']:.4f}",  "Mean Absolute Error")
+                m2.metric("RMSE", f"{model_metrics['rmse']:.4f}", "Root Mean Sq Error")
+                m3.metric("MAPE", f"{model_metrics['mape']:.1f}%","Mean Abs % Error")
+                m4.metric("R²",   f"{model_metrics['r2']:.4f}",   "Coefficient of Det.")
+                st.markdown("""
+<div class="data-note">Metrik dihitung dengan cross-validation pada data historis. R² mendekati 1.0 menunjukkan model baik.</div>
+""", unsafe_allow_html=True)
+
+        else:
+            st.info("Klik **▶ Jalankan Prophet** di atas untuk memulai prediksi.")
+            st.markdown("""
+<div class="data-note">Model akan dilatih pada data 2001–2020 dan memproyeksikan nilai ke depan. Proses sekitar 5–15 detik per parameter.</div>
+""", unsafe_allow_html=True)
