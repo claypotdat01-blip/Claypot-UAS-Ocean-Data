@@ -881,7 +881,6 @@ elif mode == "Real Time":
 <div style="background:#EDFAF3;border:1px solid #9FD9BE;border-left:4px solid #00895A;border-radius:6px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00895A;">
   🟢 <b>{n_ok}/{n_all} API aktif</b> · Diperbarui: {update_wib}<br>
   <span style="font-size:10px;color:#2A7050;">{detail}</span><br>
-  <span style="font-size:10px;color:#2A7050;">⚫ NASA MODIS — Dinonaktifkan · Klorofil-a kini dari CMEMS Ocean Colour</span>
 </div>
 """, unsafe_allow_html=True)
         else:
