@@ -2,7 +2,7 @@
 LAUTAN — Platform Intelijen Oseanografi Papua
 ============================================================
 Real-Time  : CMEMS (arus/SST/salinitas/klorofil-a) · ERA5/Open-Meteo (angin) · BMKG (gelombang)
-             Chl-a dari CMEMS bio dataset
+             NASA MODIS DINONAKTIFKAN — Chl-a dari CMEMS bio dataset
 Historis   : rangkuman_historis_20tahun.csv  (fallback: data sintetis)
 Prediksi   : Prophet (Facebook/Meta)
 ============================================================
@@ -496,6 +496,7 @@ with st.sidebar:
             for api_name, ok in st.session_state.api_status.items():
                 if api_name == "NASA MODIS":
                     st.markdown(
+                        "<span style='font-size:11px;font-family:monospace'>⚫ NASA MODIS — Dinonaktifkan (Chl-a dari CMEMS)</span>",
                         unsafe_allow_html=True
                     )
                     continue
