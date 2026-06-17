@@ -14,15 +14,10 @@ plotly>=5.20.0
 requests>=2.31.0
 
 # ── Sumber Data API ────────────────────────────────────────
-# CMEMS (arus, SST, salinitas)
+# CMEMS (arus, SST, salinitas, DAN klorofil-a — menggantikan NASA MODIS)
 copernicusmarine>=1.2.0
-
-# NASA Earthdata (klorofil-a MODIS)
-earthaccess>=0.9.0
-
-# ERA5 / ECMWF (angin, gelombang historis)
+# ERA5 / ECMWF (angin)
 cdsapi>=0.6.1
-
 # NetCDF4 (baca file .nc dari ERA5)
 netCDF4>=1.6.5
 
