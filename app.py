@@ -17,157 +17,168 @@ STYLE = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-}
-.stApp {
-    background: #F2F6FA;
-    color: #0D1F33;
-}
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+.stApp { background: #EAF4F8; color: #0B2C3D; }
+
+/* ---------- SIDEBAR: teal-navy gelap, teks terang (kontras tinggi) ---------- */
 [data-testid="stSidebar"] {
-    background: #0D1F33 !important;
-    border-right: 1px solid #1A3A5C !important;
+    background: linear-gradient(180deg, #0A2E40 0%, #0D4253 100%) !important;
+    border-right: 1px solid #14546A !important;
 }
-[data-testid="stSidebar"] * { color: #CBD8E8 !important; }
+[data-testid="stSidebar"] * { color: #DCEEF2 !important; }
 [data-testid="stSidebar"] .stSelectbox label,
-[data-testid="stSidebar"] .stRadio label {
-    color: #7BAFD4 !important;
+[data-testid="stSidebar"] .stRadio label,
+[data-testid="stSidebar"] .stCheckbox label {
+    color: #8FD3DE !important;
     font-size: 10px !important;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     font-family: 'JetBrains Mono', monospace !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
 }
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-    color: #7BAFD4 !important;
+    color: #AFD8E0 !important;
     font-size: 12px !important;
 }
 [data-testid="stSidebar"] .stSelectbox > div > div {
-    background: #162A42 !important;
-    border: 1px solid #2A4A6A !important;
-    color: #CBD8E8 !important;
-    border-radius: 6px !important;
+    background: #103B4C !important;
+    border: 1px solid #1F5870 !important;
+    color: #EAF6F8 !important;
+    border-radius: 8px !important;
 }
-[data-testid="stSidebar"] .stRadio > div > label {
-    color: #CBD8E8 !important;
-}
+[data-testid="stSidebar"] .stRadio > div > label { color: #DCEEF2 !important; }
+
+/* ---------- BUTTONS ---------- */
 .stButton > button {
-    background: #1E6BB8 !important;
+    background: #0E9AA7 !important;
     border: none !important;
     color: #FFFFFF !important;
     font-family: 'Inter', sans-serif !important;
     font-size: 13px !important;
-    font-weight: 600 !important;
-    border-radius: 6px !important;
-    transition: background 0.2s ease !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    transition: all 0.18s ease !important;
     padding: 10px 20px !important;
     letter-spacing: 0.02em !important;
+    box-shadow: 0 3px 10px rgba(14,154,167,0.28) !important;
 }
 .stButton > button:hover {
-    background: #1558A0 !important;
+    background: #0B7A85 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 5px 16px rgba(14,154,167,0.38) !important;
 }
+
+/* ---------- METRICS ---------- */
 [data-testid="stMetric"] {
     background: #FFFFFF;
-    border: 1px solid #D6E4F0;
-    border-radius: 8px;
+    border: 1px solid #CDE4EA;
+    border-top: 3px solid #0E9AA7;
+    border-radius: 12px;
     padding: 16px 20px !important;
+    box-shadow: 0 2px 12px rgba(11,44,61,0.06);
 }
 [data-testid="stMetricLabel"] {
-    color: #5A7FA0 !important;
+    color: #2F5A70 !important;
     font-size: 11px !important;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-family: 'JetBrains Mono', monospace !important;
 }
 [data-testid="stMetricValue"] {
-    color: #0D1F33 !important;
+    color: #0B2C3D !important;
     font-size: 24px !important;
     font-weight: 700 !important;
 }
+
+/* ---------- TABS ---------- */
 .stTabs [data-baseweb="tab-list"] {
     background: #FFFFFF !important;
-    border-bottom: 1px solid #D6E4F0 !important;
-    border-radius: 8px 8px 0 0 !important;
+    border-bottom: 1px solid #CDE4EA !important;
+    border-radius: 12px 12px 0 0 !important;
     gap: 0;
     padding: 0 12px;
 }
 .stTabs [data-baseweb="tab"] {
     background: transparent !important;
     border: none !important;
-    color: #5A7FA0 !important;
+    color: #3D6075 !important;
     font-family: 'Inter', sans-serif !important;
     font-size: 13px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     padding: 12px 18px !important;
 }
 .stTabs [aria-selected="true"] {
-    color: #1E6BB8 !important;
-    border-bottom: 2px solid #1E6BB8 !important;
-    font-weight: 600 !important;
+    color: #0E9AA7 !important;
+    border-bottom: 3px solid #0E9AA7 !important;
+    font-weight: 700 !important;
 }
-hr { border-color: #D6E4F0 !important; }
+hr { border-color: #CDE4EA !important; }
+.stAlert { border-radius: 10px !important; }
 
-/* Back button on sidebar — force high contrast */
+/* Tombol di sidebar (Kembali ke Beranda) — putih + teks teal-navy (kontras) */
 [data-testid="stSidebar"] .stButton > button {
     background: #FFFFFF !important;
-    color: #0D1F33 !important;
-    border: 1px solid #7BAFD4 !important;
-    font-weight: 600 !important;
+    color: #0A2E40 !important;
+    border: 1px solid #0E9AA7 !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-    background: #E8F2FB !important;
+    background: #E2F3F5 !important;
 }
 
 .page-header {
-    border-bottom: 2px solid #1E6BB8;
+    border-bottom: 3px solid #0E9AA7;
     padding-bottom: 12px;
     margin-bottom: 24px;
 }
 .page-header .eyebrow {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
-    color: #1E6BB8;
+    color: #0B7A85;
     text-transform: uppercase;
     letter-spacing: 0.16em;
     margin-bottom: 6px;
+    font-weight: 600;
 }
 .page-header h1 {
     font-size: 26px;
-    font-weight: 700;
-    color: #0D1F33;
+    font-weight: 800;
+    color: #0B2C3D;
     margin: 0;
     letter-spacing: -0.02em;
 }
 .section-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
-    color: #1E6BB8;
+    color: #0B7A85;
     text-transform: uppercase;
     letter-spacing: 0.14em;
     margin-bottom: 10px;
-    font-weight: 500;
+    font-weight: 600;
 }
 .coord-tag {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
-    color: #3A6080;
-    background: #EBF3FB;
+    color: #0B5560;
+    background: #E2F3F5;
     padding: 3px 10px;
-    border-radius: 4px;
-    border: 1px solid #C0D8EE;
+    border-radius: 6px;
+    border: 1px solid #B8E2E8;
     display: inline-block;
     margin: 2px;
 }
 .data-note {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
-    color: #7BAFD4;
-    background: #EBF3FB;
-    border-left: 3px solid #1E6BB8;
+    color: #1F4A5C !important;
+    background: #E2F3F5;
+    border-left: 3px solid #0E9AA7;
     padding: 8px 12px;
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 6px 6px 0;
     margin-top: 8px;
 }
+.data-note b { color: #0B2C3D !important; }
 </style>
 """
 st.markdown(STYLE, unsafe_allow_html=True)
@@ -259,33 +270,33 @@ df["Fisheries_Index"] = (
 # =========================================
 if st.session_state.page == "home":
     hero_html = """
-<div style="background:#0D1F33;border-radius:12px;padding:64px 48px 56px;text-align:center;margin-bottom:40px;position:relative;overflow:hidden;">
+<div style="background:linear-gradient(135deg,#0A2E40 0%,#0E4F62 55%,#0E9AA7 135%);border-radius:18px;padding:64px 48px 56px;text-align:center;margin-bottom:40px;position:relative;overflow:hidden;">
   <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(
-    0deg,transparent,transparent 39px,rgba(30,107,184,0.08) 40px),
-    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(30,107,184,0.08) 40px);
+    0deg,transparent,transparent 39px,rgba(255,255,255,0.05) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,0.05) 40px);
     pointer-events:none;"></div>
-  <div style="display:inline-block;background:rgba(30,107,184,0.25);border:1px solid rgba(30,107,184,0.5);border-radius:4px;padding:4px 16px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#7BAFD4;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:28px;">
-    SISTEM AKTIF · 4°S–12°S / 129°E–144°E · LAUT ARAFURA
+  <div style="display:inline-block;background:rgba(255,122,89,0.22);border:1px solid rgba(255,122,89,0.6);border-radius:20px;padding:5px 18px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#FFD9CD;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:28px;">
+    ● SISTEM AKTIF · 4°S–12°S / 129°E–144°E · LAUT ARAFURA
   </div>
-  <h1 style="font-family:'Inter',sans-serif;font-size:72px;font-weight:800;color:#FFFFFF;letter-spacing:-0.04em;margin:0 0 6px;line-height:1;">LAUTAN</h1>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#7BAFD4;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:24px;">Platform Intelijen Oseanografi Papua</div>
-  <div style="color:#A8C0D8;font-size:15px;max-width:500px;margin:0 auto 40px;line-height:1.8;">
-    Data klimatologi laut historis dan proyeksi musiman<br>untuk kawasan perairan Papua &amp; Laut Arafura.
+  <h1 style="font-family:'Inter',sans-serif;font-size:74px;font-weight:800;color:#FFFFFF;letter-spacing:-0.04em;margin:0 0 6px;line-height:1;">LAUTAN</h1>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9FE6ED;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:24px;">Platform Intelijen Oseanografi Papua</div>
+  <div style="color:#D5EEF3;font-size:15px;max-width:520px;margin:0 auto 40px;line-height:1.8;">
+    Data klimatologi historis, kondisi laut <b style="color:#FFFFFF;">real-time</b>, &amp; proyeksi musiman<br>untuk kawasan perairan Papua &amp; Laut Arafura.
   </div>
   <div style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap;">
     <div style="text-align:center;">
       <div style="font-size:32px;font-weight:800;color:#FFFFFF;letter-spacing:-0.02em;">20+</div>
-      <div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;margin-top:4px;">TAHUN DATA</div>
+      <div style="font-size:10px;color:#9FE6ED;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;margin-top:4px;">TAHUN DATA</div>
     </div>
-    <div style="width:1px;background:#1E3A5C;"></div>
+    <div style="width:1px;background:rgba(255,255,255,0.18);"></div>
     <div style="text-align:center;">
       <div style="font-size:32px;font-weight:800;color:#FFFFFF;letter-spacing:-0.02em;">12</div>
-      <div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;margin-top:4px;">PARAMETER</div>
+      <div style="font-size:10px;color:#9FE6ED;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;margin-top:4px;">PARAMETER</div>
     </div>
-    <div style="width:1px;background:#1E3A5C;"></div>
+    <div style="width:1px;background:rgba(255,255,255,0.18);"></div>
     <div style="text-align:center;">
-      <div style="font-size:32px;font-weight:800;color:#FFFFFF;letter-spacing:-0.02em;">100×100</div>
-      <div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;margin-top:4px;">GRID SPASIAL</div>
+      <div style="font-size:32px;font-weight:800;color:#FF9E86;letter-spacing:-0.02em;">LIVE</div>
+      <div style="font-size:10px;color:#9FE6ED;font-family:'JetBrains Mono',monospace;letter-spacing:0.12em;margin-top:4px;">REAL-TIME</div>
     </div>
   </div>
 </div>
@@ -371,6 +382,56 @@ if st.session_state.page == "home":
     st.stop()
 
 # =========================================
+# REAL-TIME OCEAN DATA (Open-Meteo, gratis tanpa API key)
+# =========================================
+@st.cache_data(ttl=900, show_spinner="Mengambil kondisi laut terkini…")
+def fetch_realtime_arafura():
+    """Kondisi laut TERKINI titik tengah Laut Arafura (-8.5, 137) dari Open-Meteo.
+    Mengembalikan dict (sst, gelombang, arus, arah, angin, waktu) atau None bila gagal.
+    Di-cache 15 menit, dan HANYA dipanggil saat mode Real Time -> app tetap ringan."""
+    import urllib.request, json
+    lat, lon = -8.5, 137.0
+    out = {}
+    try:
+        m_url = ("https://marine-api.open-meteo.com/v1/marine"
+                 f"?latitude={lat}&longitude={lon}"
+                 "&current=wave_height,wave_direction,sea_surface_temperature,"
+                 "ocean_current_velocity,ocean_current_direction&timezone=auto")
+        req = urllib.request.Request(m_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            cur = json.loads(r.read()).get("current", {})
+        if cur.get("sea_surface_temperature") is None or cur.get("wave_height") is None:
+            return None
+        spd_ms = (cur.get("ocean_current_velocity") or 0.0) / 3.6   # km/jam -> m/s
+        cdir = float(cur.get("ocean_current_direction") or 0.0)
+        rad = np.radians(cdir)
+        out.update({
+            "time": cur.get("time"),
+            "sst": float(cur["sea_surface_temperature"]),
+            "wave": float(cur["wave_height"]),
+            "wave_dir": cur.get("wave_direction"),
+            "curr_speed": float(spd_ms),
+            "uo": float(spd_ms * np.sin(rad)),   # komponen timur
+            "vo": float(spd_ms * np.cos(rad)),   # komponen utara
+        })
+    except Exception:
+        return None
+    # Angin: best-effort, terpisah, boleh gagal (endpoint kadang kena rate-limit).
+    try:
+        w_url = ("https://api.open-meteo.com/v1/forecast"
+                 f"?latitude={lat}&longitude={lon}"
+                 "&current=wind_speed_10m,wind_direction_10m&timezone=auto")
+        req = urllib.request.Request(w_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            wc = json.loads(r.read()).get("current", {})
+        out["wind_speed"] = wc.get("wind_speed_10m")
+        out["wind_dir"] = wc.get("wind_direction_10m")
+    except Exception:
+        out["wind_speed"] = None
+        out["wind_dir"] = None
+    return out
+
+# =========================================
 # SIDEBAR
 # =========================================
 with st.sidebar:
@@ -387,6 +448,7 @@ with st.sidebar:
     st.markdown("---")
     mode = st.selectbox("MODE DATA", ["Historis", "Real Time", "Prediksi"])
     st.markdown("---")
+    RT_DATA = None   # diisi hanya saat mode Real Time
 
     if mode == "Historis":
         tahun = st.selectbox("TAHUN", sorted(df["year"].unique(), reverse=True))
@@ -405,23 +467,35 @@ with st.sidebar:
             idx_bulan = bln_list.index(bulan) + 1
             df_filter_base = df_filter_base[df_filter_base["month"] == idx_bulan]
             waktu_label = f"{bulan} {tahun}"
-            ts_months = [idx_bulan]
+            ts_months = [idx_bulan]              # time series: bulan ini, lintas tahun
             ts_highlight_year = tahun
             ts_scope_label = f"Bulan {bulan}"
         else:
             musim_pilih = st.selectbox("MUSIM", list(musim_map_dict.keys()))
             df_filter_base = df_filter_base[df_filter_base["month"].isin(musim_map_dict[musim_pilih])]
             waktu_label = f"{musim_pilih} {tahun}"
-            ts_months = musim_map_dict[musim_pilih]
+            ts_months = musim_map_dict[musim_pilih]   # time series: musim ini, lintas tahun
             ts_highlight_year = tahun
             ts_scope_label = musim_pilih
 
     elif mode == "Real Time":
-        st.markdown("""
-<div class="data-note">⚠ Estimasi operasional berbasis rata-rata klimatologis CMEMS untuk bulan berjalan (Juni 2026). Bukan data pengamatan langsung.</div>
+        RT_DATA = fetch_realtime_arafura()
+        if RT_DATA:
+            _ws = (f"{RT_DATA['wind_speed']:.0f} km/jam"
+                   if RT_DATA.get("wind_speed") is not None else "—")
+            st.markdown(f"""
+<div class="data-note" style="border-left-color:#16A34A;">🟢 <b>LIVE</b> · Open-Meteo Marine<br>
+Pembaruan: {RT_DATA['time']}<br>
+SST {RT_DATA['sst']:.1f}°C · Gelombang {RT_DATA['wave']:.2f} m<br>
+Arus {RT_DATA['curr_speed']:.2f} m/s · Angin {_ws}</div>
 """, unsafe_allow_html=True)
-        df_filter_base = df[df["month"] == 6].copy()
-        waktu_label = "Juni 2026 (Est.)"
+            waktu_label = f"LIVE · {RT_DATA['time']}"
+        else:
+            st.markdown("""
+<div class="data-note">⚠ Gagal mengambil data real-time (cek koneksi internet). Sementara memakai rata-rata klimatologis Juni.</div>
+""", unsafe_allow_html=True)
+            waktu_label = "Juni (Est. klimatologis)"
+        df_filter_base = df[df["month"] == 6].copy()   # acuan parameter non-real-time
         ts_months = [6]
         ts_highlight_year = None
         ts_scope_label = "Bulan Juni"
@@ -441,7 +515,8 @@ with st.sidebar:
     st.markdown("---")
     SHOW_BORDERS = st.checkbox(
         "Tampilkan batas provinsi", value=False,
-        help="Mengambil GeoJSON batas dari internet; bisa memperlambat app saat pertama dimuat."
+        help="Mengambil GeoJSON batas dari internet; bisa memperlambat app saat pertama dimuat. "
+             "Default mati supaya tetap cepat (basemap sudah menampilkan batas wilayah)."
     )
 
     if st.session_state.role == "akademisi":
@@ -474,6 +549,8 @@ with st.sidebar:
 # =========================================
 # LAND MASK
 # =========================================
+# Land mask AKURAT berbasis global_land_mask (resolusi ~1 km, offline setelah terpasang).
+# Pasang sekali:  pip install global-land-mask
 try:
     from global_land_mask import globe as _glm
     _HAS_GLM = True
@@ -481,6 +558,7 @@ except Exception:
     _HAS_GLM = False
 
 def _manual_land_mask(lat_arr, lon_arr):
+    """Fallback kasar bila global_land_mask belum terpasang (kurang akurat)."""
     lat_arr = np.asarray(lat_arr, dtype=float)
     lon_arr = np.asarray(lon_arr, dtype=float)
     m = np.zeros(lat_arr.shape, dtype=bool)
@@ -502,6 +580,7 @@ def _manual_land_mask(lat_arr, lon_arr):
     return m
 
 def compute_land_mask(lat_arr, lon_arr):
+    """True = daratan. Vektorized: numpy array masuk -> boolean array keluar."""
     if _HAS_GLM:
         return np.asarray(_glm.is_land(np.asarray(lat_arr, dtype=float),
                                        np.asarray(lon_arr, dtype=float)))
@@ -509,6 +588,7 @@ def compute_land_mask(lat_arr, lon_arr):
 
 @st.cache_data
 def get_ocean_grid_points():
+    """Titik grid yang berada di LAUT saja (daratan sudah dibuang)."""
     lat_grid = np.linspace(-12.0, -4.5, 80)
     lon_grid = np.linspace(130.0, 144.0, 100)
     lon_g, lat_g = np.meshgrid(lon_grid, lat_grid)
@@ -521,7 +601,8 @@ def get_ocean_grid_points():
 # SPATIAL GRID
 # =========================================
 @st.cache_data
-def build_spatial_grid(val_uo_base, val_vo_base, month_seed, year_seed):
+def build_spatial_grid(val_uo_base, val_vo_base, month_seed, year_seed, sst_base=28.5, wave_base=0.8):
+    # Hanya titik di laut (daratan sudah dibuang lewat land mask akurat).
     lat_flat, lon_flat = get_ocean_grid_points()
 
     seed = int(month_seed * 1000 + year_seed)
@@ -546,7 +627,7 @@ def build_spatial_grid(val_uo_base, val_vo_base, month_seed, year_seed):
         grid_ph   = float(np.clip(8.12 + (vs * 0.005) + rng.normal(0, 0.008), 7.9, 8.4))
         grid_chla = float(np.clip(0.22 + (vs * 0.012) + rng.normal(0, 0.01),  0.05, 0.8))
         grid_sal  = float(np.clip(34.2 + (vs * 0.04)  + rng.normal(0, 0.08),  32.0, 36.5))
-        grid_wave = float(np.clip(0.8  + abs(vs) * 0.05 + rng.normal(0, 0.04), 0.2, 2.5))
+        grid_wave = float(np.clip(wave_base + abs(vs) * 0.05 + rng.normal(0, 0.04), 0.2, 5.0))
 
         grid_sohi = float(np.clip((
             0.25 * normalisasi_global(grid_do,    4.5, 7.5) +
@@ -568,7 +649,7 @@ def build_spatial_grid(val_uo_base, val_vo_base, month_seed, year_seed):
             'Ocean_Health_Index': grid_sohi,
             'Fisheries_Index':    grid_fsi,
             'uo': float(grid_uo), 'vo': float(grid_vo),
-            'sst':    float(np.clip(28.5 + (vs * 0.18) + rng.normal(0, 0.1), 26.0, 32.0)),
+            'sst':    float(np.clip(sst_base + (vs * 0.18) + rng.normal(0, 0.1), 24.0, 33.0)),
             'ssta':   float(vs * 0.06 + rng.normal(0, 0.05)),
             'ph': grid_ph, 'do': grid_do,
             'salinitas': grid_sal, 'chla': grid_chla,
@@ -583,10 +664,21 @@ val_vo_base  = float(df_filter_base["vo"].mean()    if not df_filter_base.empty 
 active_month = int(df_filter_base["month"].mean())  if not df_filter_base.empty else 6
 active_year  = int(df_filter_base["year"].mean())   if not df_filter_base.empty else 2010
 
-df_map = build_spatial_grid(val_uo_base, val_vo_base, active_month, active_year)
+# Real Time: jangkar peta ke kondisi laut TERKINI (SST, gelombang, arus) dari Open-Meteo.
+sst_base, wave_base = 28.5, 0.8
+if mode == "Real Time" and RT_DATA:
+    val_uo_base = RT_DATA["uo"]
+    val_vo_base = RT_DATA["vo"]
+    sst_base    = RT_DATA["sst"]
+    wave_base   = RT_DATA["wave"]
+
+df_map = build_spatial_grid(val_uo_base, val_vo_base, active_month, active_year, sst_base, wave_base)
 
 @st.cache_data(show_spinner=False)
 def load_batas_provinsi():
+    """GeoJSON batas provinsi Indonesia (best-effort, di-cache).
+    Dipakai sebagai layer garis di atas basemap. Bila gagal diambil
+    (mis. tanpa internet), peta tetap tampil tanpa layer ini."""
     import urllib.request, json
     url = ("https://raw.githubusercontent.com/superpikar/"
            "indonesia-geojson/master/indonesia-province-simple.json")
@@ -609,6 +701,8 @@ def render_map(df_map, z_col, colorscale, height=520):
     )
     fig.update_traces(marker=dict(size=4.5))
 
+    # Layer batas provinsi HANYA jika diaktifkan pengguna (default mati = cepat, tanpa
+    # akses internet). Basemap carto-positron sudah menampilkan batas wilayah.
     map_layers = []
     if globals().get("SHOW_BORDERS", False):
         geojson_prov = load_batas_provinsi()
@@ -641,15 +735,21 @@ def render_map(df_map, z_col, colorscale, height=520):
 # ROSE DIAGRAM HELPERS
 # =========================================
 def make_wind_rose(df_src, title="Rose Diagram Angin"):
+    """Wind rose dari komponen u/v angin."""
     if df_src.empty:
         return go.Figure()
+    # Hitung kecepatan dan arah angin dari komponen u/v
     speed = np.sqrt(df_src["angin_u"]**2 + df_src["angin_v"]**2)
-    direction_rad = np.arctan2(-df_src["angin_u"], -df_src["angin_v"])
+    # Arah dari: arah DATANG angin (meteorological convention: arah dari mana angin datang)
+    direction_rad = np.arctan2(-df_src["angin_u"], -df_src["angin_v"])  # arah datang
     direction_deg = (np.degrees(direction_rad) + 360) % 360
 
+    # Bin 16 arah
     n_bins = 16
     bin_edges = np.linspace(0, 360, n_bins + 1)
+    bin_labels = [f"{int(b)}°" for b in bin_edges[:-1]]
 
+    # Klasifikasi kecepatan
     speed_bins = [0, 2, 4, 6, 8, 100]
     speed_labels = ["<2 m/s", "2–4 m/s", "4–6 m/s", "6–8 m/s", ">8 m/s"]
     colors_wind = ["#A8C8E8","#5A9EC8","#1E6BB8","#0D3D6B","#031420"]
@@ -686,9 +786,11 @@ def make_wind_rose(df_src, title="Rose Diagram Angin"):
     return fig
 
 def make_wave_rose(df_src, title="Rose Diagram Gelombang"):
+    """Wave rose dari komponen arus sebagai proxy arah gelombang."""
     if df_src.empty:
         return go.Figure()
     speed = df_src["gelombang"]
+    # Arah gelombang dari arah arus permukaan sebagai proxy
     direction_rad = np.arctan2(df_src["uo"], df_src["vo"])
     direction_deg = (np.degrees(direction_rad) + 360) % 360
 
@@ -730,71 +832,12 @@ def make_wave_rose(df_src, title="Rose Diagram Gelombang"):
     return fig
 
 # =========================================
-# HELPER: Hitung arah dominan dari komponen u/v
-# =========================================
-def get_dominant_direction(df_src, u_col, v_col, mode="toward"):
-    """
-    Hitung arah dominan dari rata-rata vektor u/v.
-    mode='toward' -> arah kemana arus/gelombang bergerak
-    mode='from'   -> arah dari mana angin datang (konvensi meteorologi)
-    Returns: (nama_mata_angin, kecepatan_rata2, derajat)
-    """
-    if df_src.empty or u_col not in df_src.columns or v_col not in df_src.columns:
-        return "tidak tersedia", 0.0, 0.0
-
-    u_mean = float(df_src[u_col].mean())
-    v_mean = float(df_src[v_col].mean())
-    speed  = float(np.sqrt(u_mean**2 + v_mean**2))
-
-    if mode == "from":
-        # Arah dari mana angin datang (berlawanan arah vektor)
-        angle_rad = np.arctan2(-u_mean, -v_mean)
-    else:
-        # Arah kemana arus bergerak
-        angle_rad = np.arctan2(u_mean, v_mean)
-
-    deg = float((np.degrees(angle_rad) + 360) % 360)
-
-    # 16 mata angin
-    compass = [
-        "Utara", "Utara-Timur Laut", "Timur Laut", "Timur-Timur Laut",
-        "Timur", "Timur-Tenggara", "Tenggara", "Selatan-Tenggara",
-        "Selatan", "Selatan-Barat Daya", "Barat Daya", "Barat-Barat Daya",
-        "Barat", "Barat-Barat Laut", "Barat Laut", "Utara-Barat Laut"
-    ]
-    idx = int((deg + 11.25) / 22.5) % 16
-    return compass[idx], speed, deg
-
-
-def get_dominant_wave_direction(df_src):
-    """
-    Hitung arah dominan gelombang dari proxy arus permukaan (uo, vo).
-    Returns: (nama_mata_angin, tinggi_rata2, derajat)
-    """
-    if df_src.empty:
-        return "tidak tersedia", 0.0, 0.0
-
-    u_mean = float(df_src["uo"].mean())
-    v_mean = float(df_src["vo"].mean())
-    wave_mean = float(df_src["gelombang"].mean())
-
-    angle_rad = np.arctan2(u_mean, v_mean)
-    deg = float((np.degrees(angle_rad) + 360) % 360)
-
-    compass = [
-        "Utara", "Utara-Timur Laut", "Timur Laut", "Timur-Timur Laut",
-        "Timur", "Timur-Tenggara", "Tenggara", "Selatan-Tenggara",
-        "Selatan", "Selatan-Barat Daya", "Barat Daya", "Barat-Barat Daya",
-        "Barat", "Barat-Barat Laut", "Barat Laut", "Utara-Barat Laut"
-    ]
-    idx = int((deg + 11.25) / 22.5) % 16
-    return compass[idx], wave_mean, deg
-
-
-# =========================================
-# FISHERIES STATUS
+# FISHERIES STATUS — pakai FSI dari df_map
+# (rentang nyata 10–100; threshold disesuaikan)
 # =========================================
 def get_fisheries_status(fsi_val):
+    # FSI dari grid spasial nilainya bervariasi 10–100
+    # Threshold disesuaikan dengan distribusi nyata data
     p25 = df_map["Fisheries_Index"].quantile(0.25)
     p75 = df_map["Fisheries_Index"].quantile(0.75)
     if fsi_val >= p75:
@@ -804,14 +847,13 @@ def get_fisheries_status(fsi_val):
     else:
         return {"color":"#D4811A","text":"WASPADA","icon":"⚠️","bg":"#FEF6E8","border":"#F0C070"}
 
-
 # =========================================
 # DASHBOARD — NELAYAN
 # =========================================
 if st.session_state.role == "nelayan":
     mean_fsi  = float(df_map["Fisheries_Index"].mean())
     status    = get_fisheries_status(mean_fsi)
-    fsi_abs   = f"{mean_fsi:.1f}"
+    fsi_abs   = f"{mean_fsi:.1f}"  # nilai aktual untuk tampil
 
     st.markdown(f"""
 <div class="page-header">
@@ -846,85 +888,25 @@ if st.session_state.role == "nelayan":
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-    # Rose diagrams
+    # Rose diagrams untuk nelayan
     st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG</div>', unsafe_allow_html=True)
     rc1, rc2 = st.columns(2)
-    df_rose_src = df_filter_base if not df_filter_base.empty else df
     with rc1:
+        # Gunakan data time series yang di-filter untuk rose diagram
+        df_rose_src = df_filter_base if not df_filter_base.empty else df
         st.plotly_chart(make_wind_rose(df_rose_src, f"Arah & Kecepatan Angin · {waktu_label}"), use_container_width=True)
     with rc2:
         st.plotly_chart(make_wave_rose(df_rose_src, f"Arah & Tinggi Gelombang · {waktu_label}"), use_container_width=True)
 
     col_r1, col_r2 = st.columns(2)
-
     with col_r1:
-        st.markdown('<div class="section-label">REKOMENDASI ZONA MELAUT</div>', unsafe_allow_html=True)
-
-        # --- Hitung arah dominan secara DINAMIS dari filter aktif ---
-        df_rec_src = df_filter_base if not df_filter_base.empty else df
-
-        dir_angin, spd_angin, deg_angin = get_dominant_direction(
-            df_rec_src, "angin_u", "angin_v", mode="from")
-        dir_arus, spd_arus, deg_arus = get_dominant_direction(
-            df_rec_src, "uo", "vo", mode="toward")
-        dir_gelombang, h_gelombang, deg_gelombang = get_dominant_wave_direction(df_rec_src)
-
-        wave_mean = float(df_map["gelombang"].mean())
-
-        # Klasifikasi keamanan berdasarkan kecepatan angin
-        if spd_angin > 7:
-            angin_info = f"⚠️ **Angin kencang** dari **{dir_angin}** ({deg_angin:.0f}°, {spd_angin:.1f} m/s) — waspada!"
-        elif spd_angin > 4:
-            angin_info = f"🌬️ Angin sedang dari **{dir_angin}** ({deg_angin:.0f}°, {spd_angin:.1f} m/s)"
-        else:
-            angin_info = f"🍃 Angin lemah dari **{dir_angin}** ({deg_angin:.0f}°, {spd_angin:.1f} m/s)"
-
-        # Klasifikasi keamanan berdasarkan tinggi gelombang
-        if wave_mean > 1.5:
-            gelombang_info = f"🌊 Gelombang **tinggi** menuju **{dir_gelombang}** ({wave_mean:.2f} m) — hati-hati!"
-        elif wave_mean > 0.8:
-            gelombang_info = f"〰️ Gelombang sedang menuju **{dir_gelombang}** ({wave_mean:.2f} m)"
-        else:
-            gelombang_info = f"🏝️ Gelombang tenang menuju **{dir_gelombang}** ({wave_mean:.2f} m)"
-
-        # Pesan utama rekomendasi berdasarkan status FSI
+        st.markdown('<div class="section-label">REKOMENDASI ZONA</div>', unsafe_allow_html=True)
         if status["text"] == "SANGAT BAIK":
-            msg = (
-                f"**Area oranye/merah pada peta direkomendasikan.**\n\n"
-                f"🧭 **Arah melaut:** ikuti arus ke **{dir_arus}** ({deg_arus:.0f}°)\n\n"
-                f"Klorofil & oksigen melimpah — turunkan jaring di perairan dalam Arafura.\n\n"
-                f"{angin_info}\n\n"
-                f"{gelombang_info}"
-            )
-            st.success(msg)
+            st.success("**Area oranye/merah pada peta direkomendasikan.** Nutrisi laut melimpah — turunkan jaring di perairan dalam Arafura.")
         elif status["text"] == "NORMAL":
-            msg = (
-                f"**Kondisi normal — potensi tangkapan cukup.**\n\n"
-                f"🧭 **Arah melaut:** ikuti arus ke **{dir_arus}** ({deg_arus:.0f}°)\n\n"
-                f"Ikan bergerak mengikuti arus permukaan menuju **{dir_arus}**.\n\n"
-                f"{angin_info}\n\n"
-                f"{gelombang_info}"
-            )
-            st.info(msg)
+            st.info("**Kondisi normal.** Ikan bergerak mengikuti arus permukaan — ikuti arah arus ke tenggara.")
         else:
-            msg = (
-                f"**Potensi tangkapan rendah saat ini.**\n\n"
-                f"🧭 **Arah yang disarankan:** menyusuri arus menuju **{dir_arus}** ({deg_arus:.0f}°)\n\n"
-                f"Disarankan memancing di pesisir dekat teluk dan muara sungai.\n\n"
-                f"{angin_info}\n\n"
-                f"{gelombang_info}"
-            )
-            st.warning(msg)
-
-        # Ringkasan data arah dalam satu baris info
-        st.markdown(f"""
-<div class="data-note">
-  🧭 Arus dominan menuju: <b>{dir_arus}</b> ({deg_arus:.0f}°) · {spd_arus:.4f} m/s &nbsp;|&nbsp;
-  💨 Angin dari: <b>{dir_angin}</b> ({deg_angin:.0f}°) · {spd_angin:.2f} m/s &nbsp;|&nbsp;
-  🌊 Gelombang menuju: <b>{dir_gelombang}</b> ({deg_gelombang:.0f}°) · {wave_mean:.2f} m
-</div>
-""", unsafe_allow_html=True)
-
+            st.warning("**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk dan muara sungai.")
     with col_r2:
         st.markdown('<div class="section-label">KONDISI PERAIRAN SAAT INI</div>', unsafe_allow_html=True)
         chla_mean = df_map["chla"].mean()
@@ -978,6 +960,8 @@ else:
 
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
+    # Rose diagram HANYA relevan untuk parameter terarah/vektor: angin & gelombang.
+    # Untuk parameter skalar (SST, pH, salinitas, DO, klorofil, dll.) tab ini tidak ditampilkan.
     PARAM_TERARAH = ["angin_u", "angin_v", "gelombang"]
     tampilkan_rose = parameter in PARAM_TERARAH
 
@@ -1006,6 +990,9 @@ else:
 """, unsafe_allow_html=True)
 
     with tab2:
+        # Time series MENGIKUTI filter sidebar: hanya bulan/musim yang dipilih,
+        # ditampilkan lintas seluruh tahun (rata-rata per tahun). Tahun yang dipilih
+        # (mode Historis) ditandai garis vertikal merah.
         df_ts_src = df[df["month"].isin(ts_months)].copy()
         df_ts = (df_ts_src.groupby("year")[parameter].mean()
                  .reset_index().sort_values("year"))
@@ -1019,6 +1006,7 @@ else:
         else:
             y_trend = y_vals
 
+        # Sumbu-Y mengikuti sebaran data terpilih (tidak dari 0).
         y_lo = float(min(y_vals.min(), np.min(y_trend)))
         y_hi = float(max(y_vals.max(), np.max(y_trend)))
         span = y_hi - y_lo
@@ -1037,6 +1025,7 @@ else:
                 mode="lines", name="Tren Linear",
                 line=dict(color="#D4811A", width=2, dash="dot")
             ))
+        # Tandai tahun yang dipilih di sidebar (hanya mode Historis).
         if ts_highlight_year is not None and ts_highlight_year in set(x_year.tolist()):
             fig_ts.add_vline(x=ts_highlight_year,
                              line=dict(color="#C0392B", width=1.5, dash="dash"))
@@ -1095,10 +1084,13 @@ else:
 """, unsafe_allow_html=True)
 
     with tab4:
+        # Buang kolom non-parameter (koordinat & indeks waktu) supaya matriks bersih
+        # dan tidak kebanyakan kolom.
         DROP_COLS = ["year", "month", "lat", "lon", "latitude", "longitude",
                      "index", "time", "id"]
         numeric_df = df.select_dtypes(include=np.number).drop(columns=DROP_COLS, errors="ignore")
 
+        # Label ringkas supaya sel lebih lega.
         SHORT_CORR = {
             "uo": "UO", "vo": "VO", "sst": "SST", "ssta": "SSTA",
             "ph": "pH", "do": "DO", "salinitas": "SAL", "chla": "CHL-a",
@@ -1123,9 +1115,11 @@ else:
                           tickfont=dict(size=10, family="JetBrains Mono", color="#0D1F33")),
         ))
 
+        # Angka ditulis manual dengan warna teks ADAPTIF:
+        # putih di sel gelap, navy di sel terang -> selalu terbaca.
         annotations = []
-        for i in range(n):
-            for j in range(n):
+        for i in range(n):          # baris (sumbu-y)
+            for j in range(n):      # kolom (sumbu-x)
                 v = vals[i, j]
                 frac = (v - zmin) / rng_z
                 txt_color = "#FFFFFF" if frac > 0.55 else "#0D1F33"
@@ -1135,6 +1129,7 @@ else:
                     font=dict(size=10, color=txt_color, family="JetBrains Mono"),
                 ))
 
+        # Tinggi grafik menyesuaikan jumlah parameter -> sel besar, angka tidak tumpang tindih.
         chart_h = max(560, 46 * n + 170)
         fig_corr.update_layout(
             annotations=annotations,
@@ -1144,6 +1139,7 @@ else:
             plot_bgcolor="#FFFFFF",
             height=chart_h,
             margin=dict(l=10, r=10, t=60, b=10),
+            # Label sumbu dibuat gelap & lebih besar agar KONTRAS dengan latar terang.
             xaxis=dict(tickangle=45, side="bottom",
                        tickfont=dict(size=12, color="#0D1F33", family="Inter")),
             yaxis=dict(autorange="reversed",
@@ -1151,6 +1147,10 @@ else:
         )
         st.plotly_chart(fig_corr, use_container_width=True)
 
+    # Tab Rose Diagram hanya dibangun bila parameter yang dipilih bersifat terarah,
+    # dan menampilkan rose yang sesuai dengan parameter aktif:
+    #   - angin_u / angin_v  -> wind rose
+    #   - gelombang          -> wave rose
     if tampilkan_rose:
         with tab5:
             st.markdown('<div class="section-label">ROSE DIAGRAM — DISTRIBUSI ARAH & INTENSITAS</div>', unsafe_allow_html=True)
