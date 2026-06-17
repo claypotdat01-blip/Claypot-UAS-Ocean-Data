@@ -214,6 +214,10 @@ df["Fisheries_Index"] = (
 FSI_CLIM_P25 = float(df["Fisheries_Index"].quantile(0.25))
 FSI_CLIM_P75 = float(df["Fisheries_Index"].quantile(0.75))
 
+# Ambang kategori Ocean Health Index — kuartil klimatologis 20 tahun.
+OHI_CLIM_P25 = float(df["Ocean_Health_Index"].quantile(0.25))
+OHI_CLIM_P75 = float(df["Ocean_Health_Index"].quantile(0.75))
+
 # =========================================
 # HELPERS: RENDER MAP
 # =========================================
@@ -367,6 +371,19 @@ def get_fisheries_status(fsi_val, p25=None, p75=None):
         return {"color":"#1E6BB8","text":"NORMAL","icon":"🔵","bg":"#EBF3FB","border":"#7BAFD4"}
     else:
         return {"color":"#D4811A","text":"WASPADA","icon":"⚠️","bg":"#FEF6E8","border":"#F0C070"}
+
+
+def get_health_status(ohi_val, p25=None, p75=None):
+    """Kategori Ocean Health Index berdasarkan kuartil klimatologis 20 tahun.
+       < Q25 = Perlu Perhatian · Q25–Q75 = Cukup Sehat · > Q75 = Sehat."""
+    p25 = OHI_CLIM_P25 if p25 is None else p25
+    p75 = OHI_CLIM_P75 if p75 is None else p75
+    if ohi_val >= p75:
+        return {"color":"#00895A","text":"SEHAT","icon":"🟢","bg":"#EDFAF3","border":"#9FD9BE"}
+    elif ohi_val >= p25:
+        return {"color":"#D4811A","text":"CUKUP SEHAT","icon":"🟡","bg":"#FEF6E8","border":"#F0C070"}
+    else:
+        return {"color":"#C0392B","text":"PERLU PERHATIAN","icon":"🔴","bg":"#FCECEA","border":"#E8B0A8"}
 
 # =========================================
 # HOME PAGE
@@ -736,6 +753,22 @@ if mode == "Historis":
         col3.metric("Maksimum",  f"{df_map[parameter].max():.3f}")
         col4.metric("Std. Dev",  f"{df_map[parameter].std():.3f}")
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+        # Kategori kesehatan ekosistem — hanya saat parameter Ocean Health Index.
+        if parameter == "Ocean_Health_Index":
+            ohi_val = float(df_map[parameter].mean())
+            hs = get_health_status(ohi_val)
+            st.markdown(f"""
+<div style="background:{hs['bg']};border:1px solid {hs['border']};border-left:4px solid {hs['color']};border-radius:8px;padding:14px 18px;margin-bottom:8px;">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Status Kesehatan Ekosistem · {waktu_label}</div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:18px;">{hs['icon']}</span>
+    <span style="color:{hs['color']};font-size:18px;font-weight:700;">{hs['text']}</span>
+    <span style="font-family:'JetBrains Mono',monospace;color:#8ABDD4;font-size:12px;">OHI {ohi_val:.1f}/100</span>
+    <span style="font-family:'JetBrains Mono',monospace;color:#9FB4C8;font-size:10px;">(ambang: &lt;{OHI_CLIM_P25:.1f} perlu perhatian · {OHI_CLIM_P25:.1f}–{OHI_CLIM_P75:.1f} cukup sehat · &gt;{OHI_CLIM_P75:.1f} sehat)</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
         PARAM_TERARAH = ["angin_u","angin_v","gelombang"]
         tampilkan_rose = parameter in PARAM_TERARAH
@@ -1139,6 +1172,22 @@ elif mode == "Real Time":
         col3.metric("Maksimum",  f"{df_map_rt[parameter].max():.3f}")
         col4.metric("Std. Dev",  f"{df_map_rt[parameter].std():.3f}")
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+        # Kategori kesehatan ekosistem — hanya saat parameter Ocean Health Index.
+        if parameter == "Ocean_Health_Index":
+            ohi_val = float(df_map_rt[parameter].mean())
+            hs = get_health_status(ohi_val)
+            st.markdown(f"""
+<div style="background:{hs['bg']};border:1px solid {hs['border']};border-left:4px solid {hs['color']};border-radius:8px;padding:14px 18px;margin-bottom:12px;">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A7FA0;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Status Kesehatan Ekosistem · Terkini</div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:18px;">{hs['icon']}</span>
+    <span style="color:{hs['color']};font-size:18px;font-weight:700;">{hs['text']}</span>
+    <span style="font-family:'JetBrains Mono',monospace;color:#8ABDD4;font-size:12px;">OHI {ohi_val:.1f}/100</span>
+    <span style="font-family:'JetBrains Mono',monospace;color:#9FB4C8;font-size:10px;">(ambang: &lt;{OHI_CLIM_P25:.1f} perlu perhatian · {OHI_CLIM_P25:.1f}–{OHI_CLIM_P75:.1f} cukup sehat · &gt;{OHI_CLIM_P75:.1f} sehat)</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
         PARAM_TERARAH = ["angin_u","angin_v","gelombang"]
         tampilkan_rose = parameter in PARAM_TERARAH
