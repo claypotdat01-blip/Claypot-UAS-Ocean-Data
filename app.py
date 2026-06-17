@@ -1,7 +1,7 @@
 """
 LAUTAN — Platform Intelijen Oseanografi Papua
 ============================================================
-Real-Time  : CMEMS (arus/SST/salinitas) · NASA MODIS (klorofil-a)
+Real-Time  : CMEMS (arus/SST/salinitas) · CMEMS (klorofil-a)
              ERA5/CDS (angin) · BMKG Open (gelombang)
 Prediksi   : Prophet (Facebook/Meta) — model deret waktu
 Historis   : rangkuman_historis_20tahun.csv  (fallback: data sintetis)
@@ -433,7 +433,7 @@ if st.session_state.page == "home":
     st.markdown("""
 <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:32px;">
   <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:4px;letter-spacing:0.08em;">🌊 CMEMS · Arus/SST/Salinitas</span>
-  <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:4px;letter-spacing:0.08em;">🛰 NASA MODIS · Klorofil-a</span>
+  <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:4px;letter-spacing:0.08em;">🛰 CMEMS  · Klorofil-a</span>
   <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:4px;letter-spacing:0.08em;">💨 ERA5/ECMWF · Angin</span>
   <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:4px;letter-spacing:0.08em;">🌧 BMKG · Gelombang</span>
 </div>
@@ -501,7 +501,7 @@ if st.session_state.page == "home":
   </div>
 </div>
 """, unsafe_allow_html=True)
-    st.markdown("""<div style="text-align:center;margin-top:24px;"><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#A8C0D8;letter-spacing:0.1em;">SUMBER DATA: CMEMS · MODIS-Aqua · ERA5 · BMKG · 2001–2020</div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div style="text-align:center;margin-top:24px;"><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#A8C0D8;letter-spacing:0.1em;">SUMBER DATA: CMEMS · CMEMS · ERA5 · BMKG · 2001–2020</div></div>""", unsafe_allow_html=True)
     st.stop()
 
 # =========================================
@@ -556,7 +556,7 @@ with st.sidebar:
     # ── SIDEBAR: Real Time ───────────────────────────────────
     elif mode == "Real Time":
         st.markdown("""
-<div class="data-note">🛰 Data langsung dari:<br>· CMEMS (arus, SST, salinitas)<br>· NASA MODIS (klorofil-a)<br>· ERA5/ECMWF (angin)<br>· BMKG (gelombang)</div>
+<div class="data-note">🛰 Data langsung dari:<br>· CMEMS (arus, SST, salinitas)<br>· CMEMS (klorofil-a)<br>· ERA5/ECMWF (angin)<br>· BMKG (gelombang)</div>
 """, unsafe_allow_html=True)
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -911,7 +911,7 @@ elif mode == "Real Time":
   </div>
   <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
     <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;">🌊 CMEMS · Arus/SST/Salinitas</span>
-    <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;">🛰 NASA MODIS · Klorofil-a</span>
+    <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;">🛰 CMEMS· Klorofil-a</span>
     <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;">💨 ERA5/ECMWF · Angin</span>
     <span style="background:#EBF3FB;border:1px solid #C0D8EE;color:#1E6BB8;font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px;">🌧 BMKG · Gelombang</span>
   </div>
@@ -1003,7 +1003,7 @@ elif mode == "Real Time":
             param_rt_list = [
                 ("🌡 SST", f"{df_map_rt['sst'].mean():.2f} °C", "CMEMS" if is_live else "Estimasi"),
                 ("🧪 Salinitas", f"{df_map_rt['salinitas'].mean():.2f} PSU", "CMEMS" if is_live else "Estimasi"),
-                ("🌿 Klorofil-a", f"{df_map_rt['chla'].mean():.3f} mg/m³", "NASA MODIS" if is_live else "Estimasi"),
+                ("🌿 Klorofil-a", f"{df_map_rt['chla'].mean():.3f} mg/m³", "CMEMS" if is_live else "Estimasi"),
                 ("💧 Dissolved O₂", f"{df_map_rt['do'].mean():.2f} mg/L", "Derivasi"),
                 ("🌊 Gelombang", f"{df_map_rt['gelombang'].mean():.2f} m", "BMKG" if is_live else "Estimasi"),
                 ("💨 Angin U", f"{df_map_rt['angin_u'].mean():.2f} m/s", "ERA5" if is_live else "Estimasi"),
@@ -1070,7 +1070,7 @@ elif mode == "Real Time":
             st.markdown(f"""
 <div style="background:#EDFAF3;border:1px solid #9FD9BE;border-left:4px solid #00895A;border-radius:6px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00895A;">
   🟢 {n_ok}/{n_all} API berhasil terhubung · Data diperbarui: {update_wib}
-  &nbsp;&nbsp;|&nbsp;&nbsp; CMEMS · NASA MODIS · ERA5 · BMKG
+  &nbsp;&nbsp;|&nbsp;&nbsp; CMEMS · CMEMS · ERA5 · BMKG
 </div>
 """, unsafe_allow_html=True)
         else:
