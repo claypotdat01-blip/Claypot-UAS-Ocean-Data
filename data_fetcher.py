@@ -1,9 +1,14 @@
 """
-data_fetcher.py — LAUTAN
+data_fetcher.py — LAUTAN Platform Intelijen Oseanografi Papua
+============================================================
 Sumber data real-time:
-  · CMEMS  : arus (uo/vo), SST, salinitas, klorofil-a (chla) ← chla pindah ke sini
-  · ERA5   : angin (angin_u / angin_v)
-  · BMKG   : gelombang
+  · CMEMS Fisika  : arus (uo/vo), SST, salinitas
+  · CMEMS Klorofil: klorofil-a / chla  ← menggantikan NASA MODIS
+  · ERA5 / CDS    : angin permukaan (angin_u / angin_v)
+  · BMKG          : tinggi gelombang signifikan
+
+NASA MODIS dihapus dari pipeline real-time karena akses sulit.
+============================================================
 """
 
 import datetime
@@ -18,36 +23,43 @@ from config import (
 )
 
 
-# ─────────────────────────────────────────────────────────
-# HELPER: rentang waktu 3 hari terakhir
-# ─────────────────────────────────────────────────────────
-def _date_range_recent(days=3):
+# ─────────────────────────────────────────────────────────────
+# HELPER: rentang waktu N hari terakhir dalam format ISO string
+# ─────────────────────────────────────────────────────────────
+def _date_range_recent(days: int = 3):
     end   = datetime.date.today()
     start = end - datetime.timedelta(days=days)
-    return start.strftime("%Y-%m-%dT00:00:00"), end.strftime("%Y-%m-%dT23:59:59")
+    return (
+        start.strftime("%Y-%m-%dT00:00:00"),
+        end.strftime("%Y-%m-%dT23:59:59"),
+    )
 
 
-# ─────────────────────────────────────────────────────────
-# 1. CMEMS — arus (uo/vo), SST, salinitas
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# 1. CMEMS FISIKA — arus (uo/vo), SST, salinitas
+# ─────────────────────────────────────────────────────────────
 def fetch_cmems(cmems_user: str, cmems_pass: str) -> dict:
     """
-    Ambil uo, vo, SST, salinitas dari CMEMS Global Ocean Physics.
-    Dataset: cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i  (arus)
-             cmems_mod_glo_phy-thetao_anfc_0.083deg_PT6H-i (SST)
-             cmems_mod_glo_phy-so_anfc_0.083deg_PT6H-i  (salinitas)
-    Kembalikan dict dengan rata-rata scalar per variabel.
+    Ambil uo, vo, SST, dan salinitas dari CMEMS Global Ocean Physics
+    Analysis and Forecast.
+
+    Dataset yang digunakan:
+      - Arus   : cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i  (var: uo, vo)
+      - SST    : cmems_mod_glo_phy-thetao_anfc_0.083deg_PT6H-i (var: thetao)
+      - Salinitas: cmems_mod_glo_phy-so_anfc_0.083deg_PT6H-i  (var: so)
+
+    Mengembalikan dict scalar rata-rata area Laut Arafura.
     """
     try:
         import copernicusmarine as cm
 
-        start_dt, end_dt = _date_range_recent(3)
+        start_dt, end_dt = _date_range_recent(days=3)
 
-        # — arus —
+        # ── Arus (uo, vo) ──────────────────────────────────
         ds_cur = cm.open_dataset(
-            dataset_id  = "cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i",
-            username    = cmems_user,
-            password    = cmems_pass,
+            dataset_id        = "cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i",
+            username          = cmems_user,
+            password          = cmems_pass,
             minimum_latitude  = LAT_MIN,
             maximum_latitude  = LAT_MAX,
             minimum_longitude = LON_MIN,
@@ -60,11 +72,11 @@ def fetch_cmems(cmems_user: str, cmems_pass: str) -> dict:
         vo_val = float(ds_cur["vo"].mean())
         ds_cur.close()
 
-        # — SST —
+        # ── SST (thetao) ───────────────────────────────────
         ds_sst = cm.open_dataset(
-            dataset_id  = "cmems_mod_glo_phy-thetao_anfc_0.083deg_PT6H-i",
-            username    = cmems_user,
-            password    = cmems_pass,
+            dataset_id        = "cmems_mod_glo_phy-thetao_anfc_0.083deg_PT6H-i",
+            username          = cmems_user,
+            password          = cmems_pass,
             minimum_latitude  = LAT_MIN,
             maximum_latitude  = LAT_MAX,
             minimum_longitude = LON_MIN,
@@ -74,14 +86,14 @@ def fetch_cmems(cmems_user: str, cmems_pass: str) -> dict:
             variables         = ["thetao"],
         )
         sst_val  = float(ds_sst["thetao"].mean())
-        ssta_val = sst_val - 28.5          # anomali sederhana vs klimatologi
+        ssta_val = round(sst_val - 28.5, 4)   # anomali sederhana vs klimatologi
         ds_sst.close()
 
-        # — salinitas —
+        # ── Salinitas (so) ─────────────────────────────────
         ds_sal = cm.open_dataset(
-            dataset_id  = "cmems_mod_glo_phy-so_anfc_0.083deg_PT6H-i",
-            username    = cmems_user,
-            password    = cmems_pass,
+            dataset_id        = "cmems_mod_glo_phy-so_anfc_0.083deg_PT6H-i",
+            username          = cmems_user,
+            password          = cmems_pass,
             minimum_latitude  = LAT_MIN,
             maximum_latitude  = LAT_MAX,
             minimum_longitude = LON_MIN,
@@ -94,82 +106,126 @@ def fetch_cmems(cmems_user: str, cmems_pass: str) -> dict:
         ds_sal.close()
 
         return {
-            "ok": True,
-            "uo": uo_val, "vo": vo_val,
-            "sst": sst_val, "ssta": ssta_val,
+            "ok"       : True,
+            "uo"       : uo_val,
+            "vo"       : vo_val,
+            "sst"      : sst_val,
+            "ssta"     : ssta_val,
             "salinitas": sal_val,
         }
 
     except Exception as e:
-        print(f"[CMEMS physics] ERROR: {e}")
-        return {"ok": False, "uo": -0.05, "vo": -0.01,
-                "sst": 28.5, "ssta": 0.0, "salinitas": 34.2}
+        print(f"[CMEMS Fisika] ERROR: {e}")
+        # Fallback nilai klimatologis rata-rata Laut Arafura
+        return {
+            "ok"       : False,
+            "uo"       : -0.05,
+            "vo"       : -0.01,
+            "sst"      : 28.5,
+            "ssta"     : 0.0,
+            "salinitas": 34.2,
+        }
 
 
-# ─────────────────────────────────────────────────────────
-# 2. CMEMS — Klorofil-a  ← BARU, ganti NASA MODIS
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# 2. CMEMS KLOROFIL-A  ← menggantikan fetch_nasa_modis
+# ─────────────────────────────────────────────────────────────
 def fetch_cmems_chla(cmems_user: str, cmems_pass: str) -> dict:
     """
-    Ambil klorofil-a dari CMEMS Ocean Colour (satellite L4 gap-free).
-    Dataset: cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D
-    Variabel: CHL  (mg/m³)
+    Ambil klorofil-a dari CMEMS Ocean Colour (satelit L4 gap-free).
 
-    Catatan: dataset 'my' (multi-year reprocessed) kadang lag ~2–4 minggu.
-    Jika ingin NRT gunakan:
-        cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D
+    Dataset utama (NRT — Near Real Time):
+      cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D
+      Variabel: CHL (mg/m³)
+      Lag data : ~1–2 hari
+
+    Fallback jika NRT tidak tersedia (dataset MY — multi-year reprocessed):
+      cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D
+      Lag data : ~2–4 minggu
+
+    Rentang waktu diambil 7 hari ke belakang untuk memastikan
+    ada data meskipun ada lag produk satelit.
     """
-    try:
-        import copernicusmarine as cm
+    # Dataset NRT diutamakan, MY sebagai fallback
+    DATASETS = [
+        "cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D",
+        "cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D",
+    ]
 
-        start_dt, end_dt = _date_range_recent(7)   # chla satelit bisa lag, ambil 7 hari
+    start_dt, end_dt = _date_range_recent(days=7)
 
-        ds = cm.open_dataset(
-            dataset_id  = "cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D",
-            username    = cmems_user,
-            password    = cmems_pass,
-            minimum_latitude  = LAT_MIN,
-            maximum_latitude  = LAT_MAX,
-            minimum_longitude = LON_MIN,
-            maximum_longitude = LON_MAX,
-            start_datetime    = start_dt,
-            end_datetime      = end_dt,
-            variables         = ["CHL"],
-        )
+    for dataset_id in DATASETS:
+        try:
+            import copernicusmarine as cm
 
-        chla_val = float(ds["CHL"].mean())
-        chla_val = float(np.clip(chla_val, 0.05, 0.8))
-        ds.close()
+            ds = cm.open_dataset(
+                dataset_id        = dataset_id,
+                username          = cmems_user,
+                password          = cmems_pass,
+                minimum_latitude  = LAT_MIN,
+                maximum_latitude  = LAT_MAX,
+                minimum_longitude = LON_MIN,
+                maximum_longitude = LON_MAX,
+                start_datetime    = start_dt,
+                end_datetime      = end_dt,
+                variables         = ["CHL"],
+            )
 
-        return {"ok": True, "chla": chla_val}
+            chla_raw = float(ds["CHL"].mean())
+            ds.close()
 
-    except Exception as e:
-        print(f"[CMEMS chla] ERROR: {e}")
-        return {"ok": False, "chla": 0.22}   # fallback klimatologis
+            # Clip ke rentang realistis Laut Arafura
+            chla_val = float(np.clip(chla_raw, 0.05, 0.8))
+
+            print(f"[CMEMS Klorofil] OK via {dataset_id} → CHL={chla_val:.4f} mg/m³")
+            return {"ok": True, "chla": chla_val, "source_dataset": dataset_id}
+
+        except Exception as e:
+            print(f"[CMEMS Klorofil] GAGAL dataset {dataset_id}: {e}")
+            continue   # coba dataset berikutnya
+
+    # Kedua dataset gagal → fallback klimatologis
+    print("[CMEMS Klorofil] Semua dataset gagal, menggunakan fallback klimatologis.")
+    return {"ok": False, "chla": 0.22, "source_dataset": "fallback"}
 
 
-# ─────────────────────────────────────────────────────────
-# 3. ERA5 / CDS — angin (angin_u / angin_v)
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# 3. NASA MODIS — TIDAK DIGUNAKAN (dipertahankan agar tidak
+#    memecah import di kode lama yang mungkin masih merujuk)
+# ─────────────────────────────────────────────────────────────
+def fetch_nasa_modis(nasa_user: str = "", nasa_pass: str = "") -> dict:
+    """
+    [DEPRECATED] Sumber klorofil-a sekarang menggunakan CMEMS.
+    Fungsi ini dipertahankan hanya untuk kompatibilitas mundur.
+    Selalu mengembalikan fallback tanpa memanggil API apapun.
+    """
+    print("[NASA MODIS] DEPRECATED — gunakan fetch_cmems_chla sebagai gantinya.")
+    return {"ok": False, "chla": 0.22}
+
+
+# ─────────────────────────────────────────────────────────────
+# 4. ERA5 / CDS — angin permukaan (angin_u / angin_v)
+# ─────────────────────────────────────────────────────────────
 def fetch_era5(cds_uid: str, cds_key: str) -> dict:
     """
-    Ambil komponen angin permukaan 10 m dari ERA5 via CDS API.
-    Variabel: u10 → angin_u,  v10 → angin_v
+    Ambil komponen angin permukaan 10 m dari ERA5 via Copernicus CDS API.
+      u10 → angin_u  (zonal,     positif ke timur)
+      v10 → angin_v  (meridional, positif ke utara)
+
+    ERA5 biasanya tersedia dengan lag ~5 hari dari hari ini.
     """
     try:
-        import cdsapi
+        import cdsapi, netCDF4 as nc, tempfile, os
 
         c = cdsapi.Client(
-            url = "https://cds.climate.copernicus.eu/api/v2",
-            key = f"{cds_uid}:{cds_key}",
+            url   = "https://cds.climate.copernicus.eu/api/v2",
+            key   = f"{cds_uid}:{cds_key}",
             quiet = True,
         )
 
-        today = datetime.date.today()
-        # ERA5 biasanya tersedia dengan lag ~5 hari
-        target = today - datetime.timedelta(days=5)
+        today  = datetime.date.today()
+        target = today - datetime.timedelta(days=5)   # ERA5 lag ~5 hari
 
-        import tempfile, os
         with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tf:
             tmp_path = tf.name
 
@@ -177,24 +233,27 @@ def fetch_era5(cds_uid: str, cds_key: str) -> dict:
             "reanalysis-era5-single-levels",
             {
                 "product_type": "reanalysis",
-                "variable"    : ["10m_u_component_of_wind", "10m_v_component_of_wind"],
+                "variable"    : [
+                    "10m_u_component_of_wind",
+                    "10m_v_component_of_wind",
+                ],
                 "year"  : str(target.year),
                 "month" : target.strftime("%m"),
                 "day"   : target.strftime("%d"),
                 "time"  : ["00:00", "06:00", "12:00", "18:00"],
-                "area"  : [LAT_MAX, LON_MIN, LAT_MIN, LON_MAX],   # N/W/S/E
+                "area"  : [LAT_MAX, LON_MIN, LAT_MIN, LON_MAX],  # N/W/S/E
                 "format": "netcdf",
             },
             tmp_path,
         )
 
-        import netCDF4 as nc
-        ds = nc.Dataset(tmp_path)
+        ds    = nc.Dataset(tmp_path)
         u_val = float(np.mean(ds.variables["u10"][:]))
         v_val = float(np.mean(ds.variables["v10"][:]))
         ds.close()
         os.unlink(tmp_path)
 
+        print(f"[ERA5] OK → u={u_val:.3f} m/s, v={v_val:.3f} m/s")
         return {"ok": True, "angin_u": u_val, "angin_v": v_val}
 
     except Exception as e:
@@ -202,32 +261,39 @@ def fetch_era5(cds_uid: str, cds_key: str) -> dict:
         return {"ok": False, "angin_u": -1.5, "angin_v": -0.5}
 
 
-# ─────────────────────────────────────────────────────────
-# 4. BMKG — gelombang
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# 5. BMKG — tinggi gelombang signifikan
+# ─────────────────────────────────────────────────────────────
 def fetch_bmkg() -> dict:
     """
-    Ambil tinggi gelombang signifikan dari BMKG Open API.
+    Ambil tinggi gelombang signifikan dari BMKG INA-OC Open API.
     Endpoint: /api/v1/weather/significant-wave-height
+    Parameter: adm4 = kode wilayah administratif level-4
     """
     try:
         import requests
 
-        url = f"{BMKG_BASE_URL}/api/v1/weather/significant-wave-height"
+        url    = f"{BMKG_BASE_URL}/api/v1/weather/significant-wave-height"
         params = {"adm4": BMKG_ADM4}
+
         resp = requests.get(url, params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
 
-        # Struktur respons BMKG: {"data": [{"wave_height": 1.2, ...}, ...]}
         records = data.get("data", [])
         if records:
-            heights = [r.get("wave_height", 1.0) for r in records if r.get("wave_height")]
+            heights  = [
+                r.get("wave_height", 1.0)
+                for r in records
+                if r.get("wave_height") is not None
+            ]
             wave_val = float(np.mean(heights)) if heights else 1.0
         else:
             wave_val = 1.0
 
         wave_val = float(np.clip(wave_val, 0.2, 2.5))
+
+        print(f"[BMKG] OK → gelombang={wave_val:.2f} m")
         return {"ok": True, "gelombang": wave_val}
 
     except Exception as e:
@@ -235,56 +301,78 @@ def fetch_bmkg() -> dict:
         return {"ok": False, "gelombang": 1.0}
 
 
-# ─────────────────────────────────────────────────────────
-# 5. BUILD REALTIME DATAFRAME — fungsi utama dipanggil app
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────
+# 6. BUILD REALTIME DATAFRAME — fungsi utama dipanggil app.py
+# ─────────────────────────────────────────────────────────────
 def build_realtime_dataframe(
-    cmems_user: str, cmems_pass: str,
-    nasa_user : str = "",   # tidak dipakai lagi, dipertahankan agar signature tidak patah
+    cmems_user: str,
+    cmems_pass: str,
+    nasa_user : str = "",   # tidak dipakai, dipertahankan agar signature lama tidak patah
     nasa_pass : str = "",
     cds_uid   : str = "",
     cds_key   : str = "",
 ) -> dict:
     """
-    Panggil semua sumber data, gabungkan jadi satu DataFrame baris tunggal,
-    kembalikan {'data': df, 'status': {nama_api: bool}}.
+    Panggil semua sumber data secara berurutan, gabungkan jadi satu
+    DataFrame baris tunggal, kembalikan:
+        {
+          'data'  : pd.DataFrame  (1 baris, semua kolom siap pakai),
+          'status': dict          (nama_api → bool),
+        }
+
+    Jika suatu API gagal, nilai fallback klimatologis digunakan
+    sehingga aplikasi tetap berjalan.
     """
 
-    # — panggil semua API —
+    # ── panggil semua sumber ──────────────────────────────
+    print("[build_realtime_dataframe] Menghubungi CMEMS Fisika...")
     r_cmems = fetch_cmems(cmems_user, cmems_pass)
-    r_chla  = fetch_cmems_chla(cmems_user, cmems_pass)   # ← CMEMS, bukan MODIS
+
+    print("[build_realtime_dataframe] Menghubungi CMEMS Klorofil-a...")
+    r_chla  = fetch_cmems_chla(cmems_user, cmems_pass)
+
+    print("[build_realtime_dataframe] Menghubungi ERA5/CDS...")
     r_era5  = fetch_era5(cds_uid, cds_key)
+
+    print("[build_realtime_dataframe] Menghubungi BMKG...")
     r_bmkg  = fetch_bmkg()
 
-    # — status per API —
+    # ── status koneksi per API ────────────────────────────
     status = {
-        "CMEMS (Fisika)"  : r_cmems["ok"],
-        "CMEMS (Klorofil)": r_chla["ok"],   # ← label baru
-        "ERA5/ECMWF"      : r_era5["ok"],
-        "BMKG"            : r_bmkg["ok"],
+        "CMEMS (Fisika)"       : r_cmems["ok"],
+        "CMEMS (Klorofil-a)"   : r_chla["ok"],
+        "ERA5 / ECMWF"         : r_era5["ok"],
+        "BMKG"                 : r_bmkg["ok"],
     }
 
-    # — derivasi DO dan pH dari SST/salinitas (tidak ada API langsung) —
+    # ── derivasi DO dan pH (tidak ada API langsung) ───────
+    # DO menurun saat SST naik; pH menurun saat salinitas naik
     sst_val = r_cmems["sst"]
     sal_val = r_cmems["salinitas"]
     do_val  = float(np.clip(6.2  - (sst_val - 28.5) * 0.1, 4.5, 7.5))
     ph_val  = float(np.clip(8.12 - (sal_val - 34.2) * 0.02, 7.9, 8.4))
 
+    # ── rangkai satu baris DataFrame ─────────────────────
     now = datetime.datetime.utcnow()
 
     row = {
         "time"     : now,
         "month"    : now.month,
         "year"     : now.year,
+        # Arus & fisika — CMEMS
         "uo"       : r_cmems["uo"],
         "vo"       : r_cmems["vo"],
         "sst"      : sst_val,
         "ssta"     : r_cmems["ssta"],
         "salinitas": sal_val,
-        "chla"     : r_chla["chla"],          # ← dari CMEMS sekarang
+        # Klorofil-a — CMEMS Ocean Colour (sebelumnya NASA MODIS)
+        "chla"     : r_chla["chla"],
+        # Derivasi
         "do"       : do_val,
         "ph"       : ph_val,
+        # Gelombang — BMKG
         "gelombang": r_bmkg["gelombang"],
+        # Angin — ERA5
         "angin_u"  : r_era5["angin_u"],
         "angin_v"  : r_era5["angin_v"],
     }
@@ -292,4 +380,5 @@ def build_realtime_dataframe(
     df_rt = pd.DataFrame([row])
     df_rt["current_speed"] = np.sqrt(df_rt["uo"]**2 + df_rt["vo"]**2)
 
+    print(f"[build_realtime_dataframe] Selesai. Status: {status}")
     return {"data": df_rt, "status": status}
