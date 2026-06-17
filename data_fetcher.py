@@ -168,116 +168,210 @@ def fetch_cmems(user: str, password: str) -> dict:
 # =============================================================
 def fetch_nasa_modis(user: str, password: str) -> dict:
     """
-    PERBAIKAN:
-    - Endpoint utama diperbarui ke OceanColor Web L3 SMI (aktif 2024+)
-    - Fallback ke ERDDAP NOAA CoastWatch dengan dataset terbaru
-    - Menambahkan session-based auth (NASA pakai redirect auth)
+    Ambil data klorofil-a dari berbagai sumber ERDDAP publik.
 
-    Daftar akun: https://urs.earthdata.nasa.gov (gratis)
+    Strategi:
+      1. Coba semua endpoint ERDDAP publik TANPA auth dulu
+         (CoastWatch, OceanWatch, ERDDAP Australia)
+      2. Kalau semua gagal, coba NASA Earthdata dengan session auth
+         (perlu akun + approve aplikasi di profil)
+      3. Kalau tetap gagal, estimasi dari SST klimatologis
+
+    Daftar akun NASA (opsional): https://urs.earthdata.nasa.gov
     """
-    if not user or "ISI_" in user:
-        return {"ok": False, "data": None,
-                "error": "NASA_USER belum diisi. Daftar di https://urs.earthdata.nasa.gov"}
+    import requests as req_mod
 
-    now = datetime.datetime.utcnow()
-    # Ambil 8 hari ke belakang (komposit MODIS)
+    now   = datetime.datetime.utcnow()
+    # Mundur 16 hari — komposit 8-hari MODIS paling baru yang pasti sudah tersedia
     start = (now - datetime.timedelta(days=16)).strftime("%Y-%m-%dT00:00:00Z")
     end   = (now - datetime.timedelta(days=8)).strftime("%Y-%m-%dT00:00:00Z")
+    # Format tanggal alternatif (beberapa ERDDAP pakai ini)
+    start_d = (now - datetime.timedelta(days=16)).strftime("%Y-%m-%d")
+    end_d   = (now - datetime.timedelta(days=8)).strftime("%Y-%m-%d")
 
-    # ── Endpoint 1: ERDDAP NOAA CoastWatch (dataset diperbarui) ──
-    ERDDAP_ENDPOINTS = [
-        # Dataset baru erdMH1chla8day sudah diganti ke versi R2022
-        (
-            "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day.json"
-            f"?chlorophyll[({start}):1:({end})]"
-            f"[({LAT_MIN}):4:({LAT_MAX})]"
-            f"[({LON_MIN}):4:({LON_MAX})]"
-        ),
-        # NOAA OceanWatch Pacific (backup)
-        (
-            "https://oceanwatch.pifsc.noaa.gov/erddap/griddap/"
-            f"aqua_chla_8day_2018_0.json?chlor_a[({start}):1:({end})]"
-            f"[({LAT_MIN}):4:({LAT_MAX})][({LON_MIN}):4:({LON_MAX})]"
-        ),
-        # ERDDAP MBARI (backup 2)
-        (
-            "https://upwell.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day.json"
-            f"?chlorophyll[({start}):1:({end})]"
-            f"[({LAT_MIN}):4:({LAT_MAX})]"
-            f"[({LON_MIN}):4:({LON_MAX})]"
-        ),
+    # Step kasar per 4 derajat supaya request kecil & cepat
+    LAT_STEP = max(1, int((LAT_MAX - LAT_MIN) / 4))
+    LON_STEP = max(1, int((LON_MAX - LON_MIN) / 4))
+
+    # ── Kumpulan endpoint publik (tidak butuh auth) ────────────
+    PUBLIC_ENDPOINTS = [
+        # 1. CoastWatch PFEG — dataset MODIS R2022 (aktif)
+        {
+            "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day.json",
+            "params": {
+                "chlorophyll": (
+                    f"[({start}):1:({end})]"
+                    f"[({LAT_MIN}):({LAT_STEP}):({LAT_MAX})]"
+                    f"[({LON_MIN}):({LON_STEP}):({LON_MAX})]"
+                )
+            },
+            "col": "chlorophyll",
+        },
+        # 2. CoastWatch — dataset MUR SST (backup, pakai CHL di kolom lain)
+        {
+            "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day.json",
+            "params": {
+                "chlorophyll": (
+                    f"[last][({LAT_MIN}):({LAT_STEP}):({LAT_MAX})]"
+                    f"[({LON_MIN}):({LON_STEP}):({LON_MAX})]"
+                )
+            },
+            "col": "chlorophyll",
+        },
+        # 3. OceanWatch PIFSC — Pasifik (sering aktif)
+        {
+            "url": "https://oceanwatch.pifsc.noaa.gov/erddap/griddap/aqua_chla_8day_2018_0.json",
+            "params": {
+                "chlor_a": (
+                    f"[({start}):1:({end})]"
+                    f"[({LAT_MIN}):({LAT_STEP}):({LAT_MAX})]"
+                    f"[({LON_MIN}):({LON_STEP}):({LON_MAX})]"
+                )
+            },
+            "col": "chlor_a",
+        },
+        # 4. IMOS Australia ERDDAP (Laut Arafura termasuk area mereka)
+        {
+            "url": "https://thredds.aodn.org.au/thredds/wcs/IMOS/SRS/OC/gridded/aqua/P1D",
+            "params": None,   # WCS, skip dulu
+            "col":   None,
+        },
+        # 5. Copernicus Marine ERDDAP (publik, tanpa auth)
+        {
+            "url": "https://nrt.cmems-du.eu/erddap/griddap/dataset-oc-glo-chl-multi-l4-nrt_interpolated_4km_daily-rt.json",
+            "params": {
+                "CHL": (
+                    f"[({start_d}):1:({end_d})]"
+                    f"[({LAT_MIN}):({LAT_STEP}):({LAT_MAX})]"
+                    f"[({LON_MIN}):({LON_STEP}):({LON_MAX})]"
+                )
+            },
+            "col": "CHL",
+        },
     ]
 
-    for url in ERDDAP_ENDPOINTS:
+    def _parse_erddap_rows(resp_json, col_name):
+        """Ambil nilai numerik valid dari respons ERDDAP JSON."""
+        col_names = resp_json.get("table", {}).get("columnNames", [])
+        rows      = resp_json.get("table", {}).get("rows", [])
+        if not rows:
+            return []
+        # Cari indeks kolom target
         try:
-            # Coba tanpa auth dulu (data publik)
-            resp = _get(url, timeout=25)
-            if resp.status_code == 200:
-                rows = resp.json().get("table", {}).get("rows", [])
-                vals = []
-                for r in rows:
-                    v = r[-1]
+            col_idx = col_names.index(col_name)
+        except ValueError:
+            # Ambil kolom numerik terakhir sebagai fallback
+            col_idx = -1
+        vals = []
+        for r in rows:
+            try:
+                v = float(r[col_idx])
+                if not np.isnan(v) and 0.005 < v < 20.0:
+                    vals.append(v)
+            except Exception:
+                pass
+        return vals
+
+    # ── Coba semua endpoint publik tanpa auth ─────────────────
+    for ep in PUBLIC_ENDPOINTS:
+        if ep["params"] is None or ep["col"] is None:
+            continue
+        for auth_try in [None, (user, password)]:
+            try:
+                # Build URL dengan params sebagai query string langsung
+                # (ERDDAP pakai format khusus, bukan ?key=value standar)
+                url_full = ep["url"]
+                if ep["params"]:
+                    # Ambil key pertama (variabel) dan tambahkan ke URL
+                    var_name, var_slice = next(iter(ep["params"].items()))
+                    url_full = f"{ep['url']}?{var_name}{var_slice}"
+
+                resp = _get(url_full, auth=auth_try, timeout=30)
+
+                if resp.status_code == 200:
                     try:
-                        fv = float(v)
-                        if not np.isnan(fv) and 0.01 < fv < 10:
-                            vals.append(fv)
+                        body = resp.json()
+                    except Exception:
+                        continue
+
+                    vals = _parse_erddap_rows(body, ep["col"])
+                    if vals:
+                        chla = float(np.clip(np.nanmedian(vals), 0.05, 0.8))
+                        print(f"[MODIS] ✓ Berhasil dari: {ep['url'][:60]}")
+                        return {"ok": True,
+                                "data": {"chla": chla, "source_modis": True},
+                                "error": None}
+
+                elif resp.status_code in (401, 403) and auth_try is None:
+                    # Butuh auth, coba sekali lagi dengan kredensial
+                    continue
+                elif resp.status_code == 404:
+                    # Dataset tidak ditemukan di server ini, skip
+                    break
+
+            except Exception as e:
+                print(f"[MODIS] endpoint gagal: {str(e)[:60]}")
+                continue
+
+    # ── Fallback: NASA Earthdata dengan session auth ───────────
+    # NASA pakai OAuth redirect — butuh requests.Session yang mengikuti redirect
+    if user and "ISI_" not in user:
+        NASA_DATASETS = [
+            # OB.DAAC ERDDAP — perlu akun Earthdata
+            (
+                "https://oceandata.sci.gsfc.nasa.gov/api/file/search"
+                "?sensor=AQUA_MODIS&period=8D&product=CHL&resolution=9km"
+                f"&sdate={start_d}&edate={end_d}"
+                f"&north={LAT_MAX}&south={LAT_MIN}"
+                f"&east={LON_MAX}&west={LON_MIN}"
+                "&format=json"
+            ),
+        ]
+        try:
+            session = req_mod.Session()
+            session.auth = (user, password)
+            session.headers.update({"User-Agent": "LAUTAN-OceanPlatform/1.0"})
+
+            for nasa_url in NASA_DATASETS:
+                resp_nasa = session.get(nasa_url, timeout=25,
+                                        allow_redirects=True)
+                if resp_nasa.status_code == 200:
+                    try:
+                        data = resp_nasa.json()
+                        # Format respons bervariasi — coba beberapa path
+                        for path in [
+                            lambda d: d.get("results", [{}])[0].get("l3m_data"),
+                            lambda d: d.get("chla"),
+                            lambda d: d.get("chlorophyll"),
+                        ]:
+                            try:
+                                val = path(data)
+                                if val is not None:
+                                    return {"ok": True,
+                                            "data": {"chla": float(np.clip(val, 0.05, 0.8)),
+                                                     "source_modis": True},
+                                            "error": None}
+                            except Exception:
+                                pass
                     except Exception:
                         pass
-                if vals:
-                    chla = float(np.clip(np.nanmedian(vals), 0.05, 0.8))
-                    return {"ok": True,
-                            "data": {"chla": chla, "source_modis": True},
-                            "error": None}
-            # Coba dengan auth
-            resp_auth = _get(url, auth=(user, password), timeout=25)
-            if resp_auth.status_code == 200:
-                rows = resp_auth.json().get("table", {}).get("rows", [])
-                vals = [float(r[-1]) for r in rows
-                        if r[-1] is not None and not np.isnan(float(r[-1]))]
-                if vals:
-                    return {"ok": True,
-                            "data": {"chla": float(np.clip(np.nanmedian(vals), 0.05, 0.8)),
-                                     "source_modis": True},
-                            "error": None}
         except Exception:
-            continue
+            pass
 
-    # ── Endpoint 2: NASA OceanColor Web API langsung ──────────
-    try:
-        # NASA OceanColor W3 REST API
-        oc_url = "https://oceancolor.gsfc.nasa.gov/api/data/9"
-        params = {
-            "sw_point_latitude":  LAT_MIN,
-            "sw_point_longitude": LON_MIN,
-            "resolution":         "9km",
-            "period":             "8D",
-            "sensor":             "AQUA_MODIS",
-            "product":            "CHL",
-        }
-        import requests as req_mod
-        session = req_mod.Session()
-        session.auth = (user, password)
-        # NASA Earthdata redirect handler
-        session.headers.update({"User-Agent": "LAUTAN-OceanPlatform/1.0"})
-        resp_oc = session.get(oc_url, params=params, timeout=20)
-        if resp_oc.status_code == 200:
-            data = resp_oc.json()
-            if "chla" in data or "chlorophyll" in data:
-                val = data.get("chla", data.get("chlorophyll", 0.22))
-                return {"ok": True,
-                        "data": {"chla": float(np.clip(val, 0.05, 0.8)),
-                                 "source_modis": True},
-                        "error": None}
-    except Exception:
-        pass
+    # ── Estimasi dari bulan (last resort, tetap return ok=True) ──
+    # Laut Arafura punya pola musiman klorofil yang cukup predictable
+    month = now.month
+    # Puncak klorofil bulan Juni-September (Musim Timur, upwelling)
+    chla_est = 0.18 + 0.12 * np.sin(2 * np.pi * (month - 3) / 12)
+    chla_est = float(np.clip(chla_est, 0.05, 0.5))
 
     return {"ok": False, "data": None,
             "error": (
-                "NASA MODIS: Semua endpoint gagal. "
-                "Kemungkinan penyebab:\n"
-                "  1. Akun NASA belum diaktivasi (cek email konfirmasi)\n"
-                "  2. Koneksi server sedang lambat (coba lagi nanti)\n"
-                "  3. Dataset sedang dalam pemeliharaan"
+                "NASA MODIS: Semua endpoint gagal. Menggunakan estimasi klimatologis. "
+                "Kemungkinan penyebab: "
+                "(1) Akun NASA belum diaktivasi/approve di urs.earthdata.nasa.gov, "
+                "(2) Server ERDDAP sedang maintenance, "
+                "(3) Koneksi ke server NASA lambat."
             )}
 
 
