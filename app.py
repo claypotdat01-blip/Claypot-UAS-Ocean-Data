@@ -494,12 +494,6 @@ with st.sidebar:
             st.markdown("**Status Koneksi API:**")
             # Tampilkan semua kecuali NASA MODIS (selalu False, sudah dinonaktifkan)
             for api_name, ok in st.session_state.api_status.items():
-                if api_name == "NASA MODIS":
-                    st.markdown(
-                        "<span style='font-size:11px;font-family:monospace'>⚫ NASA MODIS — Dinonaktifkan (Chl-a dari CMEMS)</span>",
-                        unsafe_allow_html=True
-                    )
-                    continue
                 icon  = "🟢" if ok else "🔴"
                 label = "Terhubung" if ok else "Gagal"
                 # Tampilkan pesan error jika gagal
