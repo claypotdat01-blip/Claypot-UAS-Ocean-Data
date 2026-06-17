@@ -29,7 +29,7 @@ import json
 
 # ── modul internal ──────────────────────────────────────────
 from data_fetcher import (
-    fetch_cmems, fetch_nasa_modis, fetch_era5, fetch_bmkg,
+    fetch_cmems, fetch_cmems_chla, fetch_era5, fetch_bmkg,
     build_realtime_dataframe,
 )
 from predictor import run_prophet_forecast
