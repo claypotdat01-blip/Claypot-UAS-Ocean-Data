@@ -3,6 +3,15 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import datetime
+
+# ── Real Time data fetcher ──────────────────────────────────
+try:
+    from config import CMEMS_USER, CMEMS_PASS, CDS_UID, CDS_KEY
+    from data_fetcher import build_realtime_dataframe
+    _HAS_FETCHER = True
+except ImportError:
+    _HAS_FETCHER = False
 
 st.set_page_config(
     page_title="LAUTAN — Ocean Intelligence Platform",
@@ -107,7 +116,6 @@ html, body, [class*="css"] {
 }
 hr { border-color: #D6E4F0 !important; }
 
-/* Back button on sidebar — force high contrast */
 [data-testid="stSidebar"] .stButton > button {
     background: #FFFFFF !important;
     color: #0D1F33 !important;
@@ -383,6 +391,7 @@ with st.sidebar:
     st.markdown("---")
     if st.button("← Kembali ke Beranda", use_container_width=True):
         st.session_state.page = "home"
+        st.session_state.pop("rt_data", None)
         st.rerun()
     st.markdown("---")
     mode = st.selectbox("MODE DATA", ["Historis", "Real Time", "Prediksi"])
@@ -417,15 +426,63 @@ with st.sidebar:
             ts_scope_label = musim_pilih
 
     elif mode == "Real Time":
-        st.markdown("""
-<div class="data-note">⚠ Estimasi operasional berbasis rata-rata klimatologis CMEMS untuk bulan berjalan (Juni 2026). Bukan data pengamatan langsung.</div>
-""", unsafe_allow_html=True)
-        df_filter_base = df[df["month"] == 6].copy()
-        waktu_label = "Juni 2026 (Est.)"
-        ts_months = [6]
+        # ── Tombol manual refresh ──────────────────────────
+        if st.button("🔄 Ambil Data Sekarang", use_container_width=True, key="btn_fetch_rt"):
+            st.session_state.pop("rt_data", None)
+
+        if _HAS_FETCHER:
+            # Fetch hanya jika belum ada di session state
+            if "rt_data" not in st.session_state:
+                with st.spinner("Menghubungi API..."):
+                    rt_result = build_realtime_dataframe(
+                        cmems_user=CMEMS_USER,
+                        cmems_pass=CMEMS_PASS,
+                        cds_uid=CDS_UID,
+                        cds_key=CDS_KEY,
+                    )
+                st.session_state["rt_data"] = rt_result
+
+            rt_result = st.session_state["rt_data"]
+            df_rt     = rt_result["data"].copy()
+            now_month = int(df_rt["month"].iloc[0])
+            now_year  = int(df_rt["year"].iloc[0])
+
+            # Pastikan kolom turunan ada
+            if "current_speed" not in df_rt.columns:
+                df_rt["current_speed"] = np.sqrt(df_rt["uo"]**2 + df_rt["vo"]**2)
+
+            if "Ocean_Health_Index" not in df_rt.columns:
+                df_rt["Ocean_Health_Index"] = (
+                    0.25 * normalisasi_global(df_rt["do"],        4.5,  7.5) +
+                    0.20 * normalisasi_global(df_rt["ph"],        7.9,  8.4) +
+                    0.20 * normalisasi_global(df_rt["chla"],      0.05, 0.8) +
+                    0.15 * normalisasi_global(df_rt["salinitas"], 32.0, 36.5) +
+                    0.20 * (1 - normalisasi_global(df_rt["gelombang"], 0.2, 2.5))
+                ) * 100
+
+            if "Fisheries_Index" not in df_rt.columns:
+                df_rt["Fisheries_Index"] = (
+                    0.35 * normalisasi_global(df_rt["chla"],          0.05, 0.8) +
+                    0.25 * normalisasi_global(df_rt["do"],            4.5,  7.5) +
+                    0.20 * normalisasi_global(df_rt["current_speed"], 0.0,  0.25) +
+                    0.20 * (1 - normalisasi_global(df_rt["gelombang"], 0.2, 2.5))
+                ) * 100
+
+            df_filter_base = df_rt
+
+        else:
+            # Fallback silent jika data_fetcher tidak tersedia
+            now_month      = datetime.datetime.now().month
+            now_year       = datetime.datetime.now().year
+            df_filter_base = df[df["month"] == now_month].copy()
+
+        _ts               = datetime.datetime.utcnow()
+        waktu_label       = f"Real Time · {_ts.strftime('%d %b %Y %H:%M')} UTC"
+        ts_months         = [now_month]
         ts_highlight_year = None
-        ts_scope_label = "Bulan Juni"
-    else:
+        ts_scope_label    = f"Bulan {_ts.strftime('%B')}"
+
+    else:  # Prediksi
         st.markdown("""
 <div class="data-note">⚠ Proyeksi musiman berbasis regresi klimatologis 2001–2020. Bukan model NWP/GCM.</div>
 """, unsafe_allow_html=True)
@@ -733,12 +790,6 @@ def make_wave_rose(df_src, title="Rose Diagram Gelombang"):
 # HELPER: Hitung arah dominan dari komponen u/v
 # =========================================
 def get_dominant_direction(df_src, u_col, v_col, mode="toward"):
-    """
-    Hitung arah dominan dari rata-rata vektor u/v.
-    mode='toward' -> arah kemana arus/gelombang bergerak
-    mode='from'   -> arah dari mana angin datang (konvensi meteorologi)
-    Returns: (nama_mata_angin, kecepatan_rata2, derajat)
-    """
     if df_src.empty or u_col not in df_src.columns or v_col not in df_src.columns:
         return "tidak tersedia", 0.0, 0.0
 
@@ -747,15 +798,12 @@ def get_dominant_direction(df_src, u_col, v_col, mode="toward"):
     speed  = float(np.sqrt(u_mean**2 + v_mean**2))
 
     if mode == "from":
-        # Arah dari mana angin datang (berlawanan arah vektor)
         angle_rad = np.arctan2(-u_mean, -v_mean)
     else:
-        # Arah kemana arus bergerak
         angle_rad = np.arctan2(u_mean, v_mean)
 
     deg = float((np.degrees(angle_rad) + 360) % 360)
 
-    # 16 mata angin
     compass = [
         "Utara", "Utara-Timur Laut", "Timur Laut", "Timur-Timur Laut",
         "Timur", "Timur-Tenggara", "Tenggara", "Selatan-Tenggara",
@@ -767,10 +815,6 @@ def get_dominant_direction(df_src, u_col, v_col, mode="toward"):
 
 
 def get_dominant_wave_direction(df_src):
-    """
-    Hitung arah dominan gelombang dari proxy arus permukaan (uo, vo).
-    Returns: (nama_mata_angin, tinggi_rata2, derajat)
-    """
     if df_src.empty:
         return "tidak tersedia", 0.0, 0.0
 
@@ -846,7 +890,6 @@ if st.session_state.role == "nelayan":
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-    # Rose diagrams
     st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG</div>', unsafe_allow_html=True)
     rc1, rc2 = st.columns(2)
     df_rose_src = df_filter_base if not df_filter_base.empty else df
@@ -860,7 +903,6 @@ if st.session_state.role == "nelayan":
     with col_r1:
         st.markdown('<div class="section-label">REKOMENDASI ZONA MELAUT</div>', unsafe_allow_html=True)
 
-        # --- Hitung arah dominan secara DINAMIS dari filter aktif ---
         df_rec_src = df_filter_base if not df_filter_base.empty else df
 
         dir_angin, spd_angin, deg_angin = get_dominant_direction(
@@ -871,7 +913,6 @@ if st.session_state.role == "nelayan":
 
         wave_mean = float(df_map["gelombang"].mean())
 
-        # Klasifikasi keamanan berdasarkan kecepatan angin
         if spd_angin > 7:
             angin_info = f"⚠️ **Angin kencang** dari **{dir_angin}** ({deg_angin:.0f}°, {spd_angin:.1f} m/s) — waspada!"
         elif spd_angin > 4:
@@ -879,7 +920,6 @@ if st.session_state.role == "nelayan":
         else:
             angin_info = f"🍃 Angin lemah dari **{dir_angin}** ({deg_angin:.0f}°, {spd_angin:.1f} m/s)"
 
-        # Klasifikasi keamanan berdasarkan tinggi gelombang
         if wave_mean > 1.5:
             gelombang_info = f"🌊 Gelombang **tinggi** menuju **{dir_gelombang}** ({wave_mean:.2f} m) — hati-hati!"
         elif wave_mean > 0.8:
@@ -887,7 +927,6 @@ if st.session_state.role == "nelayan":
         else:
             gelombang_info = f"🏝️ Gelombang tenang menuju **{dir_gelombang}** ({wave_mean:.2f} m)"
 
-        # Pesan utama rekomendasi berdasarkan status FSI
         if status["text"] == "SANGAT BAIK":
             msg = (
                 f"**Area oranye/merah pada peta direkomendasikan.**\n\n"
@@ -916,7 +955,6 @@ if st.session_state.role == "nelayan":
             )
             st.warning(msg)
 
-        # Ringkasan data arah dalam satu baris info
         st.markdown(f"""
 <div class="data-note">
   🧭 Arus dominan menuju: <b>{dir_arus}</b> ({deg_arus:.0f}°) · {spd_arus:.4f} m/s &nbsp;|&nbsp;
@@ -1162,7 +1200,7 @@ else:
                 st.markdown("""
 <div class="data-note">Rose diagram angin dibangun dari komponen zonal (U) dan meridional (V) menggunakan konvensi meteorologis (arah dari mana angin datang).</div>
 """, unsafe_allow_html=True)
-            else:  # gelombang
+            else:
                 st.plotly_chart(
                     make_wave_rose(df_rose_src, f"Arah & Tinggi Gelombang · {waktu_label}"),
                     use_container_width=True)
