@@ -1,4 +1,3 @@
-cat > /mnt/user-data/outputs/data_fetcher.py << 'ENDOFFILE'
 """
 data_fetcher.py — Pengambil data real-time LAUTAN
 ==============================================================================
@@ -623,5 +622,4 @@ def build_realtime_dataframe(cmems_user: str, cmems_pass: str,
         "status": status,
         "errors": errors,
     }
-ENDOFFILE
-echo "data_fetcher.py done"
+
