@@ -205,6 +205,15 @@ df["Fisheries_Index"] = (
     0.10 * (1 - normalisasi_global(df["gelombang"], 0.2, 2.5))            # gelombang (operasional, negatif)
 ) * 100
 
+# Ambang status zona melaut dihitung dari KLIMATOLOGI 20 tahun (bukan dari
+# snapshot itu sendiri). Status lama selalu "NORMAL" karena membandingkan
+# rata-rata sebuah distribusi terhadap kuartil distribusi yang sama — yang
+# secara matematis hampir selalu jatuh di tengah. Dengan acuan klimatologis,
+# status benar-benar berarti "lebih baik / sama / lebih buruk dari biasanya".
+# (Pola acuan ini sama dengan yang sudah dipakai di bagian Prediksi.)
+FSI_CLIM_P25 = float(df["Fisheries_Index"].quantile(0.25))
+FSI_CLIM_P75 = float(df["Fisheries_Index"].quantile(0.75))
+
 # =========================================
 # HELPERS: RENDER MAP
 # =========================================
@@ -348,9 +357,10 @@ def make_wave_rose(df_src, title="Rose Diagram Gelombang"):
 # =========================================
 # FISHERIES STATUS
 # =========================================
-def get_fisheries_status(fsi_val, df_map):
-    p25 = df_map["Fisheries_Index"].quantile(0.25)
-    p75 = df_map["Fisheries_Index"].quantile(0.75)
+def get_fisheries_status(fsi_val, p25=None, p75=None):
+    # Acuan = klimatologi 20 tahun (default), BUKAN kuartil snapshot itu sendiri.
+    p25 = FSI_CLIM_P25 if p25 is None else p25
+    p75 = FSI_CLIM_P75 if p75 is None else p75
     if fsi_val >= p75:
         return {"color":"#00895A","text":"SANGAT BAIK","icon":"✅","bg":"#EDFAF3","border":"#9FD9BE"}
     elif fsi_val >= p25:
@@ -608,7 +618,7 @@ if mode == "Historis":
     # ── NELAYAN ─────────────────────────────────────────────
     if st.session_state.role == "nelayan":
         mean_fsi = float(df_map["Fisheries_Index"].mean())
-        status   = get_fisheries_status(mean_fsi, df_map)
+        status   = get_fisheries_status(mean_fsi)
         df_rose_src = df_hist if not df_hist.empty else df
         arah_arus,  ikon_arus  = get_arah_arus(df_rose_src)
         arah_angin, ikon_angin = get_arah_angin(df_rose_src)
@@ -975,7 +985,7 @@ elif mode == "Real Time":
     # =========================================================
     if st.session_state.role == "nelayan":
         mean_fsi = float(df_map_rt["Fisheries_Index"].mean())
-        status   = get_fisheries_status(mean_fsi, df_map_rt)
+        status   = get_fisheries_status(mean_fsi)
 
         st.markdown(f"""
 <div class="page-header">
