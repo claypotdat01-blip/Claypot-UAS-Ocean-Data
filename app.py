@@ -510,7 +510,7 @@ with st.sidebar:
     # ── SIDEBAR: Prediksi ────────────────────────────────────
     else:
         st.markdown("""
-<div class="data-note">🤖 Prediksi menggunakan Prediksi (Meta/Facebook) dilatih pada data historis 2001–2020.</div>
+<div class="data-note">🤖 Prediksi menggunakan Prophet (Meta/Facebook) dilatih pada data historis 2001–2020.</div>
 """, unsafe_allow_html=True)
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         bulan_pred = st.selectbox("TARGET BULAN PREDIKSI",
