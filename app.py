@@ -18,7 +18,7 @@ import os
 import json
 
 from data_fetcher import build_realtime_dataframe
-from predictor import run_Prediksi_forecast
+from predictor import run_prophet_forecast
 from spatial import build_spatial_grid, get_ocean_grid_points, normalisasi_global
 from config import CMEMS_USER, CMEMS_PASS, CDS_UID, CDS_KEY
 
@@ -1108,7 +1108,7 @@ elif mode == "Prediksi":
         if run_pred_nelayan:
             with st.spinner("Melatih model Prediksi..."):
                 for kp in KEY_PARAMS_NELAYAN:
-                    fc, metrics = run_Prediksi_forecast(df, kp, 12)
+                    fc, metrics = run_prophet_forecast(df, kp, 12)
                     st.session_state[f"Prediksi_nelayan_{kp}"] = (fc, metrics)
 
         results_ready = all(f"Prediksi_nelayan_{kp}" in st.session_state for kp in KEY_PARAMS_NELAYAN)
@@ -1180,7 +1180,7 @@ elif mode == "Prediksi":
 
         if run_Prediksi:
             with st.spinner(f"Melatih model Prediksi untuk {PARAM_LABELS.get(parameter, parameter)}..."):
-                forecast_df, model_metrics = run_Prediksi_forecast(df, parameter, horizon_months_ui)
+                forecast_df, model_metrics = run_prophet_forecast(df, parameter, horizon_months_ui)
                 st.session_state[Prediksi_key] = (forecast_df, model_metrics)
 
         if Prediksi_key in st.session_state:
