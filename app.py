@@ -761,13 +761,14 @@ if mode == "Historis":
 </div>
 """, unsafe_allow_html=True)
 
-        df_ts_stat = df.groupby("time")[parameter].mean().reset_index()
-        vals_stat   = df_ts_stat[parameter]
         col1,col2,col3,col4 = st.columns(4)
-        col1.metric("Rata-Rata", f"{vals_stat.mean():.4f}")
-        col2.metric("Minimum",   f"{vals_stat.min():.4f}")
-        col3.metric("Maksimum",  f"{vals_stat.max():.4f}")
-        col4.metric("Std. Dev",  f"{vals_stat.std():.4f}")
+        col1.metric("Rata-Rata", f"{df_map[parameter].mean():.3f}")
+        col2.metric("Minimum",   f"{df_map[parameter].min():.3f}")
+        col3.metric("Maksimum",  f"{df_map[parameter].max():.3f}")
+        col4.metric("Std. Dev",  f"{df_map[parameter].std():.3f}")
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        st.markdown(f"""<span class="source-pill">📂 Sumber: Data Historis 2001–2020</span><span class="source-pill">📅 Periode: {waktu_label}</span>""", unsafe_allow_html=True)
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
         PARAM_TERARAH = ["angin_u","angin_v","gelombang"]
         tampilkan_rose = parameter in PARAM_TERARAH
@@ -786,81 +787,29 @@ if mode == "Historis":
             st.plotly_chart(render_map(df_map, parameter, cmap, height=500), use_container_width=True)
             st.markdown(f"""<span class="coord-tag">4°S – 12°S</span><span class="coord-tag">129°E – 144°E</span><span class="coord-tag">Grid 100×80 · Laut Arafura</span>""", unsafe_allow_html=True)
 
-                with tabs[1]:
+        with tabs[1]:
             df_ts = df.groupby("time")[parameter].mean().reset_index()
-            y_vals = df_ts[parameter].to_numpy(dtype=float)
-        
-            if len(y_vals) >= 2:
-                z = np.polyfit(range(len(df_ts)), y_vals, 1)
-                y_trend = np.poly1d(z)(range(len(df_ts)))
-                slope_label = f"Tren {'↑' if z[0] > 0 else '↓'} {abs(z[0]*12):.5f}/tahun"
-            else:
-                y_trend = y_vals.copy()
-                slope_label = "Tren"
-        
+            y_vals  = df_ts[parameter].to_numpy(dtype=float)
+            z       = np.polyfit(range(len(df_ts)), y_vals, 1)
+            y_trend = np.poly1d(z)(range(len(df_ts)))
             y_lo = float(min(y_vals.min(), y_trend.min()))
             y_hi = float(max(y_vals.max(), y_trend.max()))
             span = y_hi - y_lo
-            pad  = span * 0.10 if span > 0 else (abs(y_hi) * 0.05 if abs(y_hi) > 0 else 0.01)
-        
+            pad  = span * 0.08 if span > 0 else (abs(y_hi) * 0.08 if y_hi else 1.0)
+
             fig_ts = go.Figure()
-            fig_ts.add_trace(go.Scatter(
-                x=df_ts["time"], y=y_vals,
-                mode="lines",
+            fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_vals, mode="lines",
                 name=PARAM_LABELS_CLEAN.get(parameter, parameter),
-                line=dict(color="#1E6BB8", width=2),
-                fill="tozeroy",
-                fillcolor="rgba(30,107,184,0.07)",
-            ))
-            if len(y_vals) >= 2:
-                fig_ts.add_trace(go.Scatter(
-                    x=df_ts["time"], y=y_trend,
-                    mode="lines", name=slope_label,
-                    line=dict(color="#D4811A", width=2, dash="dot"),
-                ))
-        
-            # highlight periode yang dipilih
-            if not df_hist.empty:
-                df_highlight = df_ts[df_ts["time"].isin(df_hist["time"])]
-                if not df_highlight.empty:
-                    fig_ts.add_trace(go.Scatter(
-                        x=df_highlight["time"],
-                        y=df_highlight[parameter].values,
-                        mode="markers",
-                        name=f"Periode: {waktu_label}",
-                        marker=dict(color="#E85A0C", size=8,
-                                    line=dict(color="#FFFFFF", width=1.5)),
-                    ))
-        
-            fig_ts.update_layout(
-                **PLOTLY_LAYOUT,
-                title=f"Tren Temporal 2001–2020 · {PARAM_LABELS_CLEAN.get(parameter, parameter)}",
-                legend=dict(font=dict(color="#3A5070", size=11),
-                            bgcolor="rgba(255,255,255,0.9)",
-                            bordercolor="#D6E4F0", borderwidth=1),
-                height=420,
-                hovermode="x unified",
-                xaxis=dict(
-                    **PLOTLY_LAYOUT["xaxis"],
-                    rangeslider=dict(visible=True, thickness=0.06),
-                    rangeselector=dict(
-                        buttons=[
-                            dict(count=2,  label="2T",  step="year", stepmode="backward"),
-                            dict(count=5,  label="5T",  step="year", stepmode="backward"),
-                            dict(count=10, label="10T", step="year", stepmode="backward"),
-                            dict(step="all", label="Semua"),
-                        ],
-                        bgcolor="#EBF3FB", activecolor="#1E6BB8",
-                        font=dict(size=11, color="#0D1F33"),
-                    ),
-                ),
-            )
-            fig_ts.update_yaxes(range=[y_lo - pad, y_hi + pad], autorange=False)
+                line=dict(color="#1E6BB8", width=1.8)))
+            fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_trend, mode="lines",
+                name="Tren Linear", line=dict(color="#D4811A", width=2, dash="dot")))
+            fig_ts.update_layout(**PLOTLY_LAYOUT,
+                title=f"Tren Temporal 2001–2020 · {PARAM_LABELS_CLEAN.get(parameter,parameter)}",
+                legend=dict(font=dict(color="#3A5070",size=11), bgcolor="rgba(255,255,255,0.9)", bordercolor="#D6E4F0", borderwidth=1),
+                height=400)
+            fig_ts.update_yaxes(range=[y_lo-pad, y_hi+pad], autorange=False)
             st.plotly_chart(fig_ts, use_container_width=True)
-            st.caption(
-                f"Sumber: Data historis CSV 2001–2020 · {len(df_ts)} titik data bulanan"
-                + (f" · Tren: {z[0]*12:+.5f}/tahun" if len(y_vals) >= 2 else "")
-            )
+            st.caption(f"✓ Skala Y: {y_lo-pad:.3f} – {y_hi+pad:.3f} | Data historis 20 tahun (2001–2020)")
 
         with tabs[2]:
             desc = df_map[[parameter]].describe()
