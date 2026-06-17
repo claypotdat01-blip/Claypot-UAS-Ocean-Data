@@ -1,5 +1,5 @@
 """
-spatial.py — Grid spasial + land mask untuk LAUTAN
+spatial.py — Grid spasial + land mask untuk OCEANA
 """
 
 import numpy as np
@@ -20,6 +20,20 @@ def normalisasi_global(series, vmin, vmax):
     if rng == 0:
         return series * 0 if hasattr(series, "__len__") else 0.0
     return (series - vmin) / rng
+
+
+def suitabilitas_optimal(x, lo, opt_lo, opt_hi, hi):
+    """
+    Skor kesesuaian 0..1 berbentuk trapesium (IDENTIK dengan yang dipakai di app.py):
+      0  bila x <= lo atau x >= hi
+      1  bila opt_lo <= x <= opt_hi   (zona optimal)
+      naik/turun linear di antaranya.
+    Dipakai untuk parameter ber-'rentang ideal' (chl-a trofik, jendela termal SST).
+    """
+    x = np.asarray(x, dtype=float)
+    naik  = np.clip((x - lo) / max(opt_lo - lo, 1e-9), 0.0, 1.0)   # ramp 0->1
+    turun = np.clip((hi - x) / max(hi - opt_hi, 1e-9), 0.0, 1.0)   # ramp 1->0
+    return np.minimum(naik, turun)
 
 
 def _manual_land_mask(lat_arr, lon_arr):
@@ -67,69 +81,74 @@ def get_ocean_grid_points():
 
 
 @st.cache_data
-def build_spatial_grid(val_uo_base: float, val_vo_base: float,
-                       month_seed: int, year_seed: int) -> pd.DataFrame:
+def build_spatial_grid(uo: float = -0.05, vo: float = -0.01,
+                       sst: float = 28.5, do: float = 6.2, ph: float = 8.12,
+                       chla: float = 0.22, sal: float = 34.2, wave: float = 0.8,
+                       angin_u: float = -1.5, angin_v: float = -0.5, ssta: float = 0.0,
+                       month_seed: int = 1, year_seed: int = 2020) -> pd.DataFrame:
     """
-    Buat DataFrame grid spasial (hanya titik laut) dengan semua parameter
-    oseanografi. Digunakan untuk render peta.
+    Grid spasial (titik laut) dengan semua parameter oseanografi, DIPUSATKAN pada
+    nilai rata-rata periode (uo, sst, chla, ...) yang dikirim app.py.
+
+    var_spasial = gelombang berfrekuensi rendah yang sudah DI-NOL-RATA-RATAKAN,
+    jadi ia hanya menambahkan TEKSTUR spasial yang mulus di sekitar nilai tengah.
+    Akibatnya:
+      • rata-rata peta = nilai periode  -> peta = headline = status (satu skala),
+      • peta berubah mengikuti musim (tidak statis tiap bulan),
+      • tidak ada derau per-titik (peta tidak berbintik).
+    Indeks FSI/OHI memakai FORMULA IDENTIK dengan app.py.
     """
     lat_flat, lon_flat = get_ocean_grid_points()
-    seed = int(month_seed * 1000 + year_seed)
-    rng  = np.random.default_rng(seed)
 
-    # Variasi spasial berbasis gelombang sinus (pengganti interpolasi model aktual)
-    var_spasial = (
+    vs = (
         2.5 * np.sin(lon_flat * 0.22 + lat_flat * 0.31 + month_seed * 0.5) +
         2.0 * np.cos(lon_flat * 0.15 - lat_flat * 0.28 + month_seed * 0.3) +
         1.5 * np.sin(lon_flat * 0.40 + lat_flat * 0.18 + year_seed  * 0.1) +
         1.0 * np.cos(lon_flat * 0.12 + lat_flat * 0.42 + year_seed  * 0.07)
     )
+    vs = vs - vs.mean()   # nol-rata-rata -> rata-rata field = nilai periode
 
-    records = []
-    for i in range(len(lat_flat)):
-        t_lat, t_lon = float(lat_flat[i]), float(lon_flat[i])
-        vs = var_spasial[i]
+    grid_uo    = uo + vs * 0.012
+    grid_vo    = vo + vs * 0.006
+    grid_speed = np.sqrt(grid_uo**2 + grid_vo**2)
 
-        grid_uo    = val_uo_base + (vs * 0.012) + rng.normal(0, 0.003)
-        grid_vo    = val_vo_base + (vs * 0.006) + rng.normal(0, 0.002)
-        grid_speed = float(np.sqrt(grid_uo**2 + grid_vo**2))
+    grid_do   = np.clip(do   - vs * 0.06,  4.5, 7.5)
+    grid_ph   = np.clip(ph   + vs * 0.005, 7.9, 8.4)
+    grid_chla = np.clip(chla + vs * 0.012, 0.05, 0.8)
+    grid_sal  = np.clip(sal  + vs * 0.04,  32.0, 36.5)
+    grid_wave = np.clip(wave + vs * 0.05,  0.2, 2.5)
+    grid_sst  = np.clip(sst  + vs * 0.18,  26.0, 32.0)
+    grid_ssta = ssta + vs * 0.06
 
-        grid_do   = float(np.clip(6.2  - vs * 0.06  + rng.normal(0, 0.05),  4.5, 7.5))
-        grid_ph   = float(np.clip(8.12 + vs * 0.005 + rng.normal(0, 0.008), 7.9, 8.4))
-        grid_chla = float(np.clip(0.22 + vs * 0.012 + rng.normal(0, 0.01),  0.05, 0.8))
-        grid_sal  = float(np.clip(34.2 + vs * 0.04  + rng.normal(0, 0.08),  32.0, 36.5))
-        grid_wave = float(np.clip(0.8  + abs(vs) * 0.05 + rng.normal(0, 0.04), 0.2, 2.5))
+    # ── Indeks — FORMULA IDENTIK dengan app.py (sumber kebenaran tunggal) ──
+    grid_sohi = (
+        0.30 * normalisasi_global(grid_do, 4.5, 7.5) +
+        0.25 * normalisasi_global(grid_ph, 7.9, 8.4) +
+        0.20 * suitabilitas_optimal(grid_chla, 0.05, 0.10, 0.40, 0.80) +
+        0.15 * suitabilitas_optimal(grid_sal, 32.0, 33.5, 35.0, 36.5) +
+        0.10 * suitabilitas_optimal(grid_sst, 22.0, 26.0, 30.0, 32.0)
+    ) * 100
 
-        grid_sohi = float(np.clip((
-            0.25 * normalisasi_global(grid_do,    4.5, 7.5) +
-            0.20 * normalisasi_global(grid_ph,    7.9, 8.4) +
-            0.20 * normalisasi_global(grid_chla,  0.05, 0.8) +
-            0.15 * normalisasi_global(grid_sal,   32.0, 36.5) +
-            0.20 * (1 - normalisasi_global(grid_wave, 0.2, 2.5))
-        ) * 100, 10, 100))
+    grid_fsi = (
+        0.35 * normalisasi_global(grid_chla, 0.05, 0.8) +
+        0.25 * suitabilitas_optimal(grid_sst, 24.0, 28.0, 30.0, 33.0) +
+        0.20 * normalisasi_global(grid_do, 4.5, 7.5) +
+        0.10 * normalisasi_global(grid_speed, 0.0, 0.25) +
+        0.10 * (1 - normalisasi_global(grid_wave, 0.2, 2.5))
+    ) * 100
 
-        grid_fsi = float(np.clip((
-            0.35 * normalisasi_global(grid_chla,  0.05, 0.8) +
-            0.25 * normalisasi_global(grid_do,    4.5, 7.5) +
-            0.20 * normalisasi_global(grid_speed, 0.0, 0.25) +
-            0.20 * (1 - normalisasi_global(grid_wave, 0.2, 2.5))
-        ) * 100, 10, 100))
+    grid_angin_u = angin_u + vs * 0.25
+    grid_angin_v = angin_v + vs * 0.12
 
-        records.append({
-            "lat": t_lat, "lon": t_lon,
-            "Ocean_Health_Index": grid_sohi,
-            "Fisheries_Index":    grid_fsi,
-            "uo": float(grid_uo), "vo": float(grid_vo),
-            "sst":    float(np.clip(28.5 + vs * 0.18 + rng.normal(0, 0.1), 26.0, 32.0)),
-            "ssta":   float(vs * 0.06 + rng.normal(0, 0.05)),
-            "ph":         grid_ph,
-            "do":         grid_do,
-            "salinitas":  grid_sal,
-            "chla":       grid_chla,
-            "current_speed": grid_speed,
-            "gelombang":  grid_wave,
-            "angin_u": float(-1.5 + vs * 0.25 + rng.normal(0, 0.1)),
-            "angin_v": float(-0.5 + vs * 0.12 + rng.normal(0, 0.06)),
-        })
-
-    return pd.DataFrame(records)
+    return pd.DataFrame({
+        "lat": lat_flat, "lon": lon_flat,
+        "Ocean_Health_Index": grid_sohi,
+        "Fisheries_Index":    grid_fsi,
+        "uo": grid_uo, "vo": grid_vo,
+        "sst": grid_sst, "ssta": grid_ssta,
+        "ph": grid_ph, "do": grid_do,
+        "salinitas": grid_sal, "chla": grid_chla,
+        "current_speed": grid_speed,
+        "gelombang": grid_wave,
+        "angin_u": grid_angin_u, "angin_v": grid_angin_v,
+    })
