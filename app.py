@@ -4,7 +4,7 @@ LAUTAN — Platform Intelijen Oseanografi Papua
 Real-Time  : CMEMS (arus/SST/salinitas/klorofil-a) · ERA5/Open-Meteo (angin) · BMKG (gelombang)
             Chl-a dari CMEMS bio dataset
 Historis   : rangkuman_historis_20tahun.csv  (fallback: data sintetis)
-Prediksi   : Prophet (Facebook/Meta)
+Prediksi   : Prediksi (Facebook/Meta)
 ============================================================
 """
 
@@ -18,7 +18,7 @@ import os
 import json
 
 from data_fetcher import build_realtime_dataframe
-from predictor import run_prophet_forecast
+from predictor import run_Prediksi_forecast
 from spatial import build_spatial_grid, get_ocean_grid_points, normalisasi_global
 from config import CMEMS_USER, CMEMS_PASS, CDS_UID, CDS_KEY
 
@@ -329,14 +329,14 @@ if st.session_state.page == "home":
   <h1 style="font-family:'Inter',sans-serif;font-size:72px;font-weight:800;color:#FFFFFF;letter-spacing:-0.04em;margin:0 0 6px;line-height:1;">LAUTAN</h1>
   <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#7BAFD4;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:24px;">Platform Intelijen Oseanografi Papua</div>
   <div style="color:#A8C0D8;font-size:15px;max-width:560px;margin:0 auto 40px;line-height:1.8;">
-    Data real-time multi-API, klimatologi historis 20 tahun,<br>dan prediksi berbasis Prophet ML untuk kawasan Laut Arafura.
+    Data real-time multi-API, klimatologi historis 20 tahun,<br>dan prediksi berbasis Prediksi ML untuk kawasan Laut Arafura.
   </div>
   <div style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap;">
     <div style="text-align:center;"><div style="font-size:32px;font-weight:800;color:#FFFFFF;">20+</div><div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;margin-top:4px;">TAHUN DATA</div></div>
     <div style="width:1px;background:#1E3A5C;"></div>
     <div style="text-align:center;"><div style="font-size:32px;font-weight:800;color:#FFFFFF;">3</div><div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;margin-top:4px;">SUMBER API</div></div>
     <div style="width:1px;background:#1E3A5C;"></div>
-    <div style="text-align:center;"><div style="font-size:32px;font-weight:800;color:#FFFFFF;">Prophet</div><div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;margin-top:4px;">ML FORECAST</div></div>
+    <div style="text-align:center;"><div style="font-size:32px;font-weight:800;color:#FFFFFF;">Prediksi</div><div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;margin-top:4px;">ML FORECAST</div></div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -380,9 +380,9 @@ if st.session_state.page == "home":
 <div style="background:#FFFFFF;border:1px solid #D6E4F0;border-top:3px solid #2E7DC4;border-radius:8px;padding:32px 28px;text-align:center;margin-bottom:12px;">
   <div style="font-size:40px;margin-bottom:16px;">🔬</div>
   <h3 style="color:#0D1F33;font-size:18px;font-weight:700;margin:0 0 8px;">Akademisi / Peneliti</h3>
-  <p style="color:#5A7FA0;font-size:14px;margin:0 0 16px;line-height:1.6;">12 parameter oseanografi, time series 20 tahun, prediksi Prophet, matriks korelasi, dan analisis spasial.</p>
+  <p style="color:#5A7FA0;font-size:14px;margin:0 0 16px;line-height:1.6;">12 parameter oseanografi, time series 20 tahun, Prediksi, matriks korelasi, dan analisis spasial.</p>
   <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
-    <span style="background:#EBF3FB;color:#1E6BB8;font-size:10px;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;border:1px solid #C0D8EE;">Prophet Forecast</span>
+    <span style="background:#EBF3FB;color:#1E6BB8;font-size:10px;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;border:1px solid #C0D8EE;">Prediksi Forecast</span>
     <span style="background:#EBF3FB;color:#1E6BB8;font-size:10px;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;border:1px solid #C0D8EE;">Korelasi</span>
     <span style="background:#EBF3FB;color:#1E6BB8;font-size:10px;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;border:1px solid #C0D8EE;">Time Series</span>
   </div>
@@ -433,7 +433,7 @@ with st.sidebar:
     mode = st.selectbox("MODE DATA", ["Historis", "Real Time", "Prediksi"])
 
     if st.session_state.prev_mode != mode:
-        keys_to_del = [k for k in st.session_state.keys() if k.startswith("prophet_")]
+        keys_to_del = [k for k in st.session_state.keys() if k.startswith("Prediksi_")]
         for k in keys_to_del:
             del st.session_state[k]
         st.session_state.prev_mode = mode
@@ -510,7 +510,7 @@ with st.sidebar:
     # ── SIDEBAR: Prediksi ────────────────────────────────────
     else:
         st.markdown("""
-<div class="data-note">🤖 Prediksi menggunakan Prophet (Meta/Facebook) dilatih pada data historis 2001–2020.</div>
+<div class="data-note">🤖 Prediksi menggunakan Prediksi (Meta/Facebook) dilatih pada data historis 2001–2020.</div>
 """, unsafe_allow_html=True)
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         bulan_pred = st.selectbox("TARGET BULAN PREDIKSI",
@@ -1093,12 +1093,12 @@ elif mode == "Prediksi":
     if st.session_state.role == "nelayan":
         st.markdown(f"""
 <div class="page-header">
-  <div class="eyebrow">🎣 Nelayan · <span class="mode-badge-pred">🤖 PREDIKSI PROPHET</span> &nbsp;· {bulan_pred}</div>
+  <div class="eyebrow">🎣 Nelayan · <span class="mode-badge-pred">🤖 Prediksi</span> &nbsp;· {bulan_pred}</div>
   <h1>Proyeksi Kondisi Laut — {bulan_pred}</h1>
 </div>
 """, unsafe_allow_html=True)
 
-        st.markdown("""<div class="data-note">Model Prophet dilatih pada 20 tahun data historis (2001–2020).</div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="data-note">Model Prediksi dilatih pada 20 tahun data historis (2001–2020).</div>""", unsafe_allow_html=True)
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
         run_pred_nelayan = st.button("▶ Jalankan Prediksi untuk Bulan Ini", use_container_width=False)
@@ -1106,17 +1106,17 @@ elif mode == "Prediksi":
         KEY_LABELS_NELAYAN = ["Fisheries Index","Klorofil-a","Tinggi Gelombang","Kecepatan Arus"]
 
         if run_pred_nelayan:
-            with st.spinner("Melatih model Prophet..."):
+            with st.spinner("Melatih model Prediksi..."):
                 for kp in KEY_PARAMS_NELAYAN:
-                    fc, metrics = run_prophet_forecast(df, kp, 12)
-                    st.session_state[f"prophet_nelayan_{kp}"] = (fc, metrics)
+                    fc, metrics = run_Prediksi_forecast(df, kp, 12)
+                    st.session_state[f"Prediksi_nelayan_{kp}"] = (fc, metrics)
 
-        results_ready = all(f"prophet_nelayan_{kp}" in st.session_state for kp in KEY_PARAMS_NELAYAN)
+        results_ready = all(f"Prediksi_nelayan_{kp}" in st.session_state for kp in KEY_PARAMS_NELAYAN)
 
         if results_ready:
             cols_pred = st.columns(4)
             for idx, kp in enumerate(KEY_PARAMS_NELAYAN):
-                fc, metrics = st.session_state[f"prophet_nelayan_{kp}"]
+                fc, metrics = st.session_state[f"Prediksi_nelayan_{kp}"]
                 future_only = fc[fc["ds"] > df["time"].max()]
                 target_row = future_only[future_only["ds"].dt.month == month_idx_pred]
                 if not target_row.empty:
@@ -1125,14 +1125,14 @@ elif mode == "Prediksi":
                     hi_val   = float(target_row["yhat_upper"].iloc[0])
                     cols_pred[idx].metric(KEY_LABELS_NELAYAN[idx], f"{pred_val:.3f}", f"± {(hi_val - lo_val)/2:.3f}")
 
-            fc_fsi, _ = st.session_state["prophet_nelayan_Fisheries_Index"]
+            fc_fsi, _ = st.session_state["Prediksi_nelayan_Fisheries_Index"]
             future_only = fc_fsi[fc_fsi["ds"] > df["time"].max()]
             fig_fsi_pred = go.Figure()
             df_ts_fsi = df.groupby("time")["Fisheries_Index"].mean().reset_index()
             fig_fsi_pred.add_trace(go.Scatter(x=df_ts_fsi["time"], y=df_ts_fsi["Fisheries_Index"].to_numpy(dtype=float),
                 mode="lines", name="Historis", line=dict(color="#A8C8E8", width=1.5)))
             fig_fsi_pred.add_trace(go.Scatter(x=future_only["ds"], y=future_only["yhat"],
-                mode="lines", name="Prediksi Prophet", line=dict(color="#E85A0C", width=2.5)))
+                mode="lines", name="Prediksi", line=dict(color="#E85A0C", width=2.5)))
             fig_fsi_pred.add_trace(go.Scatter(
                 x=pd.concat([future_only["ds"], future_only["ds"][::-1]]),
                 y=pd.concat([future_only["yhat_upper"], future_only["yhat_lower"][::-1]]),
@@ -1163,28 +1163,28 @@ elif mode == "Prediksi":
     else:
         st.markdown(f"""
 <div class="page-header">
-  <div class="eyebrow">🔬 Akademisi · <span class="mode-badge-pred">🤖 PREDIKSI PROPHET</span> &nbsp;· {bulan_pred}</div>
+  <div class="eyebrow">🔬 Akademisi · <span class="mode-badge-pred">🤖 Prediksi</span> &nbsp;· {bulan_pred}</div>
   <h1>Model Prediksi — {PARAM_LABELS.get(parameter, parameter)}</h1>
 </div>
 """, unsafe_allow_html=True)
 
-        st.markdown("""<div class="data-note">Model Prophet (Meta/Facebook) dilatih pada data historis 2001–2020. Prediksi mencakup tren, seasonalitas tahunan, dan interval kepercayaan 80%.</div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="data-note">Model Prediksi (Meta/Facebook) dilatih pada data historis 2001–2020. Prediksi mencakup tren, seasonalitas tahunan, dan interval kepercayaan 80%.</div>""", unsafe_allow_html=True)
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
         col_ph1, col_ph2 = st.columns([3, 1])
         with col_ph2:
             horizon_months_ui = st.slider("Horizon (bulan)", 3, 24, 12)
-            run_prophet = st.button("▶ Jalankan Prophet", use_container_width=True)
+            run_Prediksi = st.button("▶ Jalankan Prediksi", use_container_width=True)
 
-        prophet_key = f"prophet_{parameter}_{horizon_months_ui}"
+        Prediksi_key = f"Prediksi_{parameter}_{horizon_months_ui}"
 
-        if run_prophet:
-            with st.spinner(f"Melatih model Prophet untuk {PARAM_LABELS.get(parameter, parameter)}..."):
-                forecast_df, model_metrics = run_prophet_forecast(df, parameter, horizon_months_ui)
-                st.session_state[prophet_key] = (forecast_df, model_metrics)
+        if run_Prediksi:
+            with st.spinner(f"Melatih model Prediksi untuk {PARAM_LABELS.get(parameter, parameter)}..."):
+                forecast_df, model_metrics = run_Prediksi_forecast(df, parameter, horizon_months_ui)
+                st.session_state[Prediksi_key] = (forecast_df, model_metrics)
 
-        if prophet_key in st.session_state:
-            forecast_df, model_metrics = st.session_state[prophet_key]
+        if Prediksi_key in st.session_state:
+            forecast_df, model_metrics = st.session_state[Prediksi_key]
 
             tabs_pred = st.tabs(["  Grafik Prediksi  ","  Komponen Model  ","  Tabel Prediksi  ","  Metrik Akurasi  "])
 
@@ -1195,7 +1195,7 @@ elif mode == "Prediksi":
                     mode="lines", name="Data Historis (2001–2020)", line=dict(color="#1E6BB8", width=1.5)))
                 future_only = forecast_df[forecast_df["ds"] > df["time"].max()]
                 fig_fc.add_trace(go.Scatter(x=future_only["ds"], y=future_only["yhat"],
-                    mode="lines", name="Prediksi Prophet", line=dict(color="#E85A0C", width=2.5)))
+                    mode="lines", name="Prediksi", line=dict(color="#E85A0C", width=2.5)))
                 fig_fc.add_trace(go.Scatter(
                     x=pd.concat([future_only["ds"], future_only["ds"][::-1]]),
                     y=pd.concat([future_only["yhat_upper"], future_only["yhat_lower"][::-1]]),
@@ -1207,7 +1207,7 @@ elif mode == "Prediksi":
                         mode="markers", name=f"Target: {bulan_pred}",
                         marker=dict(color="#E85A0C", size=10, symbol="star")))
                 fig_fc.update_layout(**PLOTLY_LAYOUT,
-                    title=f"Prediksi Prophet · {PARAM_LABELS.get(parameter,parameter)} · Horizon {horizon_months_ui} Bulan",
+                    title=f"Prediksi · {PARAM_LABELS.get(parameter,parameter)} · Horizon {horizon_months_ui} Bulan",
                     legend=dict(font=dict(color="#3A5070",size=11), bgcolor="rgba(255,255,255,0.9)", bordercolor="#D6E4F0", borderwidth=1),
                     height=430)
                 with col_ph1:
@@ -1233,7 +1233,7 @@ elif mode == "Prediksi":
                             mode="lines", name=comp.capitalize(),
                             line=dict(color=colors_comp[i % len(colors_comp)], width=1.8)))
                     fig_comp.update_layout(**PLOTLY_LAYOUT, height=340,
-                        title=f"Dekomposisi Komponen Prophet · {PARAM_LABELS.get(parameter,parameter)}",
+                        title=f"Dekomposisi Komponen Prediksi · {PARAM_LABELS.get(parameter,parameter)}",
                         legend=dict(font=dict(color="#3A5070",size=11)))
                     st.plotly_chart(fig_comp, use_container_width=True)
 
@@ -1254,4 +1254,4 @@ elif mode == "Prediksi":
                 m3.metric("MAPE", f"{model_metrics['mape']:.1f}%","Mean Abs % Error")
                 m4.metric("R²",   f"{model_metrics['r2']:.4f}",   "Coefficient of Det.")
         else:
-            st.info("Klik **▶ Jalankan Prophet** di atas untuk memulai prediksi.")
+            st.info("Klik **▶ Jalankan Prediksi** di atas untuk memulai prediksi.")
