@@ -1267,4 +1267,3 @@ elif mode == "Prediksi":
                 m4.metric("R²",   f"{model_metrics['r2']:.4f}",   "Coefficient of Det.")
         else:
             st.info("Klik **▶ Jalankan Prophet** di atas untuk memulai prediksi.")
-
