@@ -612,51 +612,11 @@ if mode == "Historis":
             with col_r1:
                 st.markdown('<div class="section-label">REKOMENDASI ZONA</div>', unsafe_allow_html=True)
                 if status["text"] == "SANGAT BAIK":
-                            st.success(
-                                f"""
-                        **Kondisi sangat baik**
-                        
-                        Area oranye/merah direkomendasikan untuk penangkapan ikan.
-                        
-                        Nutrisi laut melimpah dan kondisi perairan mendukung aktivitas perikanan.
-                        
-                        Arus dominan menuju **{arah_arus}** {ikon_arus}.
-                        
-                        Angin bertiup dari **{arah_angin}** {ikon_angin}.
-                        
-                        Disarankan melakukan operasi penangkapan di perairan yang lebih terbuka.
-                        """
-                            )
-                        
-                        elif status["text"] == "NORMAL":
-                            st.info(
-                                f"""
-                        **Kondisi normal**
-                        
-                        Ikan bergerak mengikuti arus.
-                        
-                        Ikuti arah arus ke **{arah_arus}** {ikon_arus}.
-                        
-                        Angin bertiup dari **{arah_angin}** {ikon_angin}.
-                        
-                        Sesuaikan posisi perahu agar tidak melawan arus.
-                        """
-                            )
-                        
-                        else:
-                            st.warning(
-                                f"""
-                        **Potensi tangkapan rendah**
-                        
-                        Kondisi perairan kurang mendukung untuk aktivitas penangkapan ikan.
-                        
-                        Disarankan memancing di sekitar pesisir, teluk, atau muara sungai.
-                        
-                        Waspadai arus ke **{arah_arus}** {ikon_arus}.
-                        
-                        Angin bertiup dari **{arah_angin}** {ikon_angin}.
-                        """
-                            )
+                    st.success(f"**Area oranye/merah direkomendasikan.** Nutrisi laut melimpah — turunkan jaring di perairan dalam Arafura. Arus dominan menuju **{arah_arus}** {ikon_arus}, angin bertiup dari **{arah_angin}** {ikon_angin}.")
+                elif status["text"] == "NORMAL":
+                    st.info(f"**Kondisi normal.** Ikan bergerak mengikuti arus — ikuti arah arus ke **{arah_arus}** {ikon_arus}. Angin bertiup dari **{arah_angin}** {ikon_angin}, sesuaikan posisi perahu agar tidak melawan arus.")
+                else:
+                    st.warning(f"**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk dan muara sungai. Waspadai arus ke **{arah_arus}** {ikon_arus} dan angin dari **{arah_angin}** {ikon_angin}.")
             with col_r2:
                 st.markdown('<div class="section-label">KONDISI PERAIRAN</div>', unsafe_allow_html=True)
                 st.markdown(f"""
