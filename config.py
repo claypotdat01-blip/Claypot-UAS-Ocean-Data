@@ -9,8 +9,10 @@ CMEMS_USER = "claypotdat01@gmail.com"
 CMEMS_PASS = "limaJuni_2026"
 
 # ── NASA MODIS ───────────────────────────────────────────────
-# Tidak lagi digunakan untuk real-time (diganti CMEMS chla)
-# Dipertahankan agar tidak memecah import di app.py lama
+# SUDAH TIDAK DIGUNAKAN — klorofil-a real-time sekarang diambil
+# dari CMEMS Ocean Colour (fetch_cmems_chla), bukan NASA MODIS lagi.
+# Dua variabel ini dipertahankan kosong (bukan dihapus) hanya agar
+# tidak memecah import lama di app.py / data_fetcher.py.
 NASA_USER = ""
 NASA_PASS = ""
 
