@@ -2,10 +2,13 @@
 data_fetcher.py — Pengambil data real-time LAUTAN
 ==============================================================================
 Sumber data:
-  1. CMEMS  → Arus (uo/vo), SST, Salinitas, Klorofil-a (dataset bio)
-  2. MODIS  → Klorofil-a (ERDDAP publik, tanpa auth, 5 endpoint berbeda)
-  3. ERA5   → Angin (u10/v10) via CDS API; fallback Open-Meteo (tanpa akun)
-  4. BMKG   → Gelombang; fallback Open-Meteo Marine (tanpa akun)
+  1. CMEMS  → Arus (uo/vo), SST, Salinitas, Klorofil-a (dataset bio) ← UTAMA
+  2. ERA5   → Angin (u10/v10) via CDS API; fallback Open-Meteo (tanpa akun)
+  3. BMKG   → Gelombang; fallback Open-Meteo Marine (tanpa akun)
+
+CATATAN PERUBAHAN:
+  - NASA MODIS DINONAKTIFKAN — Klorofil-a sepenuhnya dari CMEMS bio dataset
+  - Prioritas Chl-a: CMEMS bio dataset → fallback klimatologis
 
 Strategi fallback berlapis:
   - Jika satu endpoint gagal → coba endpoint berikutnya
@@ -143,7 +146,7 @@ def fetch_cmems(user: str, password: str) -> dict:
             print(f"[CMEMS] dataset {dataset_id} gagal: {str(e)[:60]}")
             continue
 
-    # ── B. Coba CMEMS untuk klorofil-a (dataset biologi) — DIPERBAIKI ─────
+    # ── B. Coba CMEMS untuk klorofil-a (dataset biologi) ──────────────────
     ERDDAP_BIO_DATASETS = [
         # Dataset utama NRT global 4km (nama aktif per 2024-2025)
         ("cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D", "CHL"),
@@ -151,12 +154,16 @@ def fetch_cmems(user: str, password: str) -> dict:
         ("cmems_obs-oc_glo_bgc-plankton_my_l4-multi-4km_P1D", "CHL"),
         # Dataset multi-sensor alternatif
         ("cmems_obs-oc_glo_bgc-optics_nrt_l3-multi-4km_P1D", "CHL"),
+        # Dataset tambahan — OLCI Sentinel-3
+        ("cmems_obs-oc_glo_bgc-plankton_nrt_l3-olci-4km_P1D", "CHL"),
+        # Dataset MY (multi-year) sebagai fallback terakhir CMEMS
+        ("cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D", "CHL"),
     ]
 
-    # Coba mundur sampai 5 hari — data NRT butuh waktu proses 2-3 hari
+    # Coba mundur sampai 7 hari — data NRT butuh waktu proses 2-3 hari
     date_candidates = [
         (now - datetime.timedelta(days=d)).strftime("%Y-%m-%dT00:00:00")
-        for d in range(2, 7)   # coba D-2 sampai D-6
+        for d in range(2, 9)   # coba D-2 sampai D-8
     ]
 
     for dataset_id, var_name in ERDDAP_BIO_DATASETS:
@@ -195,7 +202,7 @@ def fetch_cmems(user: str, password: str) -> dict:
                     if len(v):
                         result["chla"] = float(np.clip(v.median(), 0.05, 0.8))
                         print(
-                            f"[CMEMS] ✓ Klorofil dari {dataset_id} "
+                            f"[CMEMS] ✓ Klorofil-a dari {dataset_id} "
                             f"(tgl {date_str[:10]}): {result['chla']:.3f} mg/m³ "
                             f"(n={len(v)})"
                         )
@@ -207,6 +214,13 @@ def fetch_cmems(user: str, password: str) -> dict:
 
         if "chla" in result:
             break  # sudah dapat klorofil, tidak perlu coba dataset lain
+
+    # ── Jika Chl-a belum dapat dari ERDDAP, coba endpoint alternatif ──────
+    if "chla" not in result:
+        print("[CMEMS] ⚠ Chl-a belum dapat dari ERDDAP, coba endpoint alternatif...")
+        chla_alt = _fetch_cmems_chla_alternative(user, password, now)
+        if chla_alt is not None:
+            result["chla"] = chla_alt
 
     # ── C. Fallback WMS — minimal verifikasi koneksi + nilai approx ───────
     if not result:
@@ -239,154 +253,119 @@ def fetch_cmems(user: str, password: str) -> dict:
             )}
 
 
+def _fetch_cmems_chla_alternative(user: str, password: str,
+                                   now: datetime.datetime):
+    """
+    Endpoint alternatif untuk Chl-a CMEMS jika ERDDAP utama gagal.
+    Mencoba:
+      1. CMEMS Copernicus Marine Toolbox REST API (subset service)
+      2. CMEMS THREDDS OPeNDAP
+    Mengembalikan nilai float Chl-a atau None jika semua gagal.
+    """
+    # ── Coba Copernicus Marine Toolbox REST (subset) ──────────────────────
+    SUBSET_DATASETS = [
+        "cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D",
+        "cmems_obs-oc_glo_bgc-plankton_my_l4-multi-4km_P1D",
+    ]
+
+    date_str = (now - datetime.timedelta(days=3)).strftime("%Y-%m-%d")
+
+    for dataset_id in SUBSET_DATASETS:
+        try:
+            url = (
+                "https://marine.copernicus.eu/services/auth/aai"
+                "/downloadChunkDataset"
+            )
+            params = {
+                "datasetId":   dataset_id,
+                "variableList": "CHL",
+                "minimumDepth":  0,
+                "maximumDepth":  1,
+                "minimumLat":   LAT_MIN,
+                "maximumLat":   LAT_MAX,
+                "minimumLon":   LON_MIN,
+                "maximumLon":   LON_MAX,
+                "startDate":    date_str,
+                "endDate":      date_str,
+                "outputFormat": "json",
+            }
+            resp = _get(url, auth=(user, password), params=params, timeout=30)
+            if resp.status_code == 200:
+                body = resp.json()
+                # Format response bervariasi, cari nilai CHL di mana saja
+                vals = _deep_find_numeric(body, ["CHL","chl","chlorophyll"])
+                vals = [v for v in vals if 0.001 < v < 20]
+                if vals:
+                    chla = float(np.clip(np.median(vals), 0.05, 0.8))
+                    print(f"[CMEMS-ALT] ✓ Chl-a dari subset API: {chla:.3f} mg/m³")
+                    return chla
+        except Exception as e:
+            print(f"[CMEMS-ALT] Subset API {dataset_id}: {str(e)[:60]}")
+
+    # ── Coba THREDDS OPeNDAP ──────────────────────────────────────────────
+    try:
+        thredds_url = (
+            "https://nrt.cmems-du.eu/thredds/dodsC/"
+            "cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D"
+            ".ascii?CHL[0:1:0][0:10:100][0:10:100]"
+        )
+        resp = _get(thredds_url, auth=(user, password), timeout=20)
+        if resp.status_code == 200:
+            # Parse ASCII DDS response
+            nums = re.findall(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", resp.text)
+            vals = []
+            for n in nums:
+                try:
+                    v = float(n)
+                    if 0.001 < v < 20:
+                        vals.append(v)
+                except Exception:
+                    pass
+            if vals:
+                chla = float(np.clip(np.median(vals), 0.05, 0.8))
+                print(f"[CMEMS-ALT] ✓ Chl-a dari THREDDS: {chla:.3f} mg/m³")
+                return chla
+    except Exception as e:
+        print(f"[CMEMS-ALT] THREDDS error: {str(e)[:60]}")
+
+    return None
+
+
+def _deep_find_numeric(obj, keys: list) -> list:
+    """Cari nilai numerik dari dict/list secara rekursif berdasarkan nama key."""
+    vals = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if any(key.lower() in k.lower() for key in keys):
+                if isinstance(v, (int, float)):
+                    vals.append(float(v))
+                elif isinstance(v, list):
+                    for item in v:
+                        if isinstance(item, (int, float)):
+                            vals.append(float(item))
+            vals.extend(_deep_find_numeric(v, keys))
+    elif isinstance(obj, list):
+        for item in obj:
+            vals.extend(_deep_find_numeric(item, keys))
+    return vals
+
+
 # =============================================================================
-# 2. KLOROFIL-A — MODIS/ERDDAP Publik (tanpa akun NASA)
+# 2. NASA MODIS — DINONAKTIFKAN
+#    Klorofil-a sepenuhnya diambil dari CMEMS bio dataset.
+#    Fungsi ini dipertahankan untuk kompatibilitas tapi tidak dipanggil.
 # =============================================================================
 def fetch_nasa_modis(user: str, password: str) -> dict:
     """
-    Ambil klorofil-a dari ERDDAP publik (NOAA CoastWatch, OceanWatch, dll).
-
-    STRATEGI BARU:
-    - Semua endpoint di bawah ini adalah DATA PUBLIK — tidak butuh akun NASA
-    - Akun NASA (user/password) tetap dicoba di beberapa endpoint sebagai bonus
-    - Jika semua gagal: estimasi musiman dari pola upwelling Laut Arafura
-
-    Kenapa sering gagal sebelumnya:
-    - URL ERDDAP harus dibangun sebagai string slice, BUKAN params dict biasa
-    - Dataset ID sering berubah (NOAA rutin update nama dataset)
-    - Timeout terlalu pendek untuk server ERDDAP yang lambat
+    [DINONAKTIFKAN] — Klorofil-a sekarang diambil dari CMEMS.
+    Fungsi ini tidak dipanggil oleh build_realtime_dataframe().
+    Tetap ada untuk kompatibilitas mundur jika diperlukan.
     """
-    now     = datetime.datetime.utcnow()
-    # Mundur 2 minggu — data komposit 8-hari pasti sudah diproses
-    end_d   = (now - datetime.timedelta(days=5)).strftime("%Y-%m-%d")
-    start_d = (now - datetime.timedelta(days=13)).strftime("%Y-%m-%d")
-    end_t   = f"{end_d}T00:00:00Z"
-    start_t = f"{start_d}T00:00:00Z"
-
-    # Step spasial kasar supaya response kecil dan cepat
-    lat_step = 3
-    lon_step = 3
-
-    # ── Daftar endpoint ERDDAP publik (diurutkan dari paling andal) ───────
-    # Format: (url_base, variable_name, auth_required)
-    PUBLIC_ERDDAP = [
-        # 1. CoastWatch PFEG — MODIS Aqua 8-day composite (dataset aktif 2024)
-        (
-            "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day.json"
-            f"?chlorophyll[({start_t}):1:({end_t})]"
-            f"[({LAT_MIN}):({lat_step}):({LAT_MAX})]"
-            f"[({LON_MIN}):({lon_step}):({LON_MAX})]",
-            "chlorophyll", False
-        ),
-        # 2. CoastWatch — versi "last" (tanggal otomatis terbaru)
-        (
-            "https://coastwatch.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day.json"
-            f"?chlorophyll[(last-1):1:(last)]"
-            f"[({LAT_MIN}):({lat_step}):({LAT_MAX})]"
-            f"[({LON_MIN}):({lon_step}):({LON_MAX})]",
-            "chlorophyll", False
-        ),
-        # 3. NOAA OceanWatch PIFSC — dataset Pasifik (mencakup Arafura)
-        (
-            "https://oceanwatch.pifsc.noaa.gov/erddap/griddap/aqua_chla_8day_2018_0.json"
-            f"?chlor_a[({start_t}):1:({end_t})]"
-            f"[({LAT_MIN}):({lat_step}):({LAT_MAX})]"
-            f"[({LON_MIN}):({lon_step}):({LON_MAX})]",
-            "chlor_a", False
-        ),
-        # 4. NOAA OceanWatch — VIIRS NPP (sensor lebih baru dari MODIS)
-        (
-            "https://oceanwatch.pifsc.noaa.gov/erddap/griddap/noaa_snpp_chla_monthly.json"
-            f"?chlor_a[(last)]"
-            f"[({LAT_MIN}):({lat_step}):({LAT_MAX})]"
-            f"[({LON_MIN}):({lon_step}):({LON_MAX})]",
-            "chlor_a", False
-        ),
-        # 5. ERDDAP upwell PFEG backup
-        (
-            "https://upwell.pfeg.noaa.gov/erddap/griddap/erdMH1chla8day.json"
-            f"?chlorophyll[(last)]"
-            f"[({LAT_MIN}):({lat_step}):({LAT_MAX})]"
-            f"[({LON_MIN}):({lon_step}):({LON_MAX})]",
-            "chlorophyll", False
-        ),
-        # 6. CMEMS klorofil via ERDDAP (pakai kredensial CMEMS, bukan NASA)
-        (
-            "https://nrt.cmems-du.eu/erddap/griddap/"
-            "cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D.json"
-            f"?CHL[(last)]"
-            f"[({LAT_MIN}):({lat_step}):({LAT_MAX})]"
-            f"[({LON_MIN}):({lon_step}):({LON_MAX})]",
-            "CHL", True   # pakai auth CMEMS
-        ),
-    ]
-
-    def _parse_erddap(resp_json: dict, var_col: str) -> list:
-        """Ekstrak list nilai numerik dari respons ERDDAP JSON."""
-        col_names = resp_json.get("table", {}).get("columnNames", [])
-        rows      = resp_json.get("table", {}).get("rows", [])
-        if not rows:
-            return []
-        idx = col_names.index(var_col) if var_col in col_names else -1
-        vals = []
-        for r in rows:
-            try:
-                v = float(r[idx])
-                if not np.isnan(v) and 0.001 < v < 20.0:
-                    vals.append(v)
-            except Exception:
-                pass
-        return vals
-
-    for url_full, var_col, need_auth in PUBLIC_ERDDAP:
-        auth_opts = []
-        if need_auth:
-            auth_opts = [(user, password)]
-        else:
-            auth_opts = [None, (user, password)]
-
-        for auth in auth_opts:
-            try:
-                resp = _get(url_full, auth=auth, timeout=35)
-
-                if resp.status_code == 200:
-                    try:
-                        body = resp.json()
-                    except Exception:
-                        continue
-                    vals = _parse_erddap(body, var_col)
-                    if vals:
-                        chla = float(np.clip(np.nanmedian(vals), 0.05, 0.8))
-                        src  = url_full.split("/erddap")[0].replace("https://","")
-                        print(f"[MODIS] ✓ Klorofil dari {src}: {chla:.3f} mg/m³ "
-                              f"(n={len(vals)})")
-                        return {"ok": True,
-                                "data": {"chla": chla, "source_modis": True},
-                                "error": None}
-
-                elif resp.status_code == 404:
-                    break
-                elif resp.status_code in (401, 403) and auth is None:
-                    continue
-                else:
-                    print(f"[MODIS] HTTP {resp.status_code} dari {url_full[:60]}")
-
-            except Exception as e:
-                print(f"[MODIS] Error: {str(e)[:70]}")
-                break
-
-    # ── Fallback: estimasi musiman Laut Arafura ────────────────────────────
-    month = now.month
-    chla_est = 0.22 + 0.13 * np.sin(2 * np.pi * (month - 2) / 12)
-    chla_est = float(np.clip(chla_est, 0.05, 0.5))
-
-    print(f"[MODIS] ✗ Semua endpoint gagal. Estimasi musiman: {chla_est:.3f} mg/m³")
-    return {"ok": False, "data": None,
-            "error": (
-                f"NASA/MODIS ERDDAP tidak merespons (semua {len(PUBLIC_ERDDAP)} endpoint dicoba). "
-                f"Data klorofil diganti estimasi musiman: {chla_est:.3f} mg/m³. "
-                "Ini NORMAL jika server NOAA sedang maintenance."
-            )}
+    return {
+        "ok":    False,
+        "data":  None,
+        "error": "NASA MODIS dinonaktifkan. Klorofil-a diambil dari CMEMS bio dataset.",
+    }
 
 
 # =============================================================================
@@ -728,10 +707,11 @@ def build_realtime_dataframe(cmems_user: str, cmems_pass: str,
     Panggil semua API, gabungkan ke satu DataFrame kompatibel dengan app.py.
 
     Urutan:
-      1. CMEMS  → uo, vo, sst, salinitas, (chla jika dataset bio tersedia)
-      2. MODIS  → chla (override CMEMS jika berhasil)
-      3. ERA5   → angin_u, angin_v, gelombang (via Open-Meteo atau CDS)
-      4. BMKG   → gelombang (override ERA5 jika berhasil)
+      1. CMEMS  → uo, vo, sst, salinitas, chla (fisik + bio dataset)
+      2. ERA5   → angin_u, angin_v, gelombang (via Open-Meteo atau CDS)
+      3. BMKG   → gelombang (override ERA5 jika berhasil)
+
+    CATATAN: NASA MODIS tidak lagi dipanggil. Chl-a sepenuhnya dari CMEMS.
 
     Returns:
         {
@@ -755,14 +735,17 @@ def build_realtime_dataframe(cmems_user: str, cmems_pass: str,
 
     status = {
         "CMEMS":           False,
-        "NASA MODIS":      False,
+        "NASA MODIS":      False,   # selalu False — dinonaktifkan
         "ERA5/Open-Meteo": False,
         "BMKG":            False,
     }
-    errors = {}
+    errors = {
+        # Langsung isi pesan info untuk MODIS supaya UI tidak tampil merah tanpa sebab
+        "NASA MODIS": "Dinonaktifkan — Klorofil-a diambil dari CMEMS bio dataset.",
+    }
     any_ok = False
 
-    # ── 1. CMEMS ────────────────────────────────────────────────────────────
+    # ── 1. CMEMS (fisik + klorofil-a) ────────────────────────────────────────
     print("\n[LAUTAN] ── Menghubungi CMEMS...")
     r = fetch_cmems(cmems_user, cmems_pass)
     if r["ok"] and r["data"]:
@@ -771,22 +754,16 @@ def build_realtime_dataframe(cmems_user: str, cmems_pass: str,
                 merged[k] = float(r["data"][k])
         status["CMEMS"] = True
         any_ok = True
-        print("[LAUTAN] ✓ CMEMS berhasil")
+        chla_src = "CMEMS bio" if "chla" in r["data"] else "klimatologi"
+        print(f"[LAUTAN] ✓ CMEMS berhasil (Chl-a dari {chla_src})")
     else:
         errors["CMEMS"] = r.get("error","unknown")
         print(f"[LAUTAN] ✗ CMEMS: {errors['CMEMS'][:80]}")
 
-    # ── 2. NASA MODIS (klorofil) ─────────────────────────────────────────────
-    print("[LAUTAN] ── Menghubungi MODIS/ERDDAP...")
-    r = fetch_nasa_modis(nasa_user, nasa_pass)
-    if r["ok"] and r["data"]:
-        merged["chla"] = float(r["data"]["chla"])
-        status["NASA MODIS"] = True
-        any_ok = True
-        print("[LAUTAN] ✓ MODIS berhasil")
-    else:
-        errors["NASA MODIS"] = r.get("error","unknown")
-        print(f"[LAUTAN] ✗ MODIS: {errors['NASA MODIS'][:80]}")
+    # ── 2. NASA MODIS — DILEWATI ─────────────────────────────────────────────
+    # Chl-a sudah diambil dari CMEMS di blok 1.
+    # Status NASA MODIS dibiarkan False dan tidak mempengaruhi data.
+    print("[LAUTAN] ── NASA MODIS dilewati (Chl-a dari CMEMS)")
 
     # ── 3. ERA5 / Open-Meteo (angin) ─────────────────────────────────────────
     print("[LAUTAN] ── Menghubungi ERA5/Open-Meteo...")
@@ -848,10 +825,15 @@ def build_realtime_dataframe(cmems_user: str, cmems_pass: str,
         df_out["Fisheries_Index"]    = 50.0
         print(f"[LAUTAN] ⚠ Indeks dihitung dengan fallback: {e}")
 
-    n_ok = sum(status.values())
-    print(f"\n[LAUTAN] Selesai: {n_ok}/{len(status)} API berhasil")
+    # Hitung berapa API yang berhasil (NASA MODIS dikecualikan dari hitungan)
+    active_apis = ["CMEMS", "ERA5/Open-Meteo", "BMKG"]
+    n_ok  = sum(status[k] for k in active_apis)
+    n_all = len(active_apis)
+    print(f"\n[LAUTAN] Selesai: {n_ok}/{n_all} API aktif berhasil")
     if errors:
-        print(f"[LAUTAN] Error: { {k:v[:60] for k,v in errors.items()} }")
+        active_errors = {k:v for k,v in errors.items() if k != "NASA MODIS"}
+        if active_errors:
+            print(f"[LAUTAN] Error: { {k:v[:60] for k,v in active_errors.items()} }")
 
     return {
         "data":   df_out if any_ok else None,
