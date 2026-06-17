@@ -334,9 +334,9 @@ if st.session_state.page == "home":
   <div style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap;">
     <div style="text-align:center;"><div style="font-size:32px;font-weight:800;color:#FFFFFF;">20+</div><div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;margin-top:4px;">TAHUN DATA</div></div>
     <div style="width:1px;background:#1E3A5C;"></div>
-    <div style="text-align:center;"><div style="font-size:32px;font-weight:800;color:#FFFFFF;">3</div><div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;margin-top:4px;">SUMBER API</div></div>
-    <div style="width:1px;background:#1E3A5C;"></div>
     <div style="text-align:center;"><div style="font-size:25px;font-weight:800;color:#FFFFFF;">Historis, Real-Time, Proyeksi</div><div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;margin-top:4px;">ML FORECAST</div></div>
+    <div style="width:1px;background:#1E3A5C;"></div>
+    <div style="text-align:center;"><div style="font-size:32px;font-weight:800;color:#FFFFFF;">3</div><div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;margin-top:4px;">SUMBER API</div></div>
   </div>
 </div>
 """, unsafe_allow_html=True)
