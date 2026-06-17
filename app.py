@@ -1,5 +1,5 @@
 """
-LAUTAN — Platform Intelijen Oseanografi Papua
+OCEANA — Platform Intelijen Oseanografi Papua
 ============================================================
 Real-Time  : CMEMS (arus/SST/salinitas/klorofil-a) · ERA5/Open-Meteo (angin) · BMKG (gelombang)
             Chl-a dari CMEMS bio dataset
@@ -23,7 +23,7 @@ from spatial import build_spatial_grid, get_ocean_grid_points, normalisasi_globa
 from config import CMEMS_USER, CMEMS_PASS, CDS_UID, CDS_KEY
 
 st.set_page_config(
-    page_title="LAUTAN — Ocean Intelligence Platform",
+    page_title="OCEANA — Ocean Intelligence Platform",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -326,7 +326,7 @@ if st.session_state.page == "home":
   <div style="display:inline-block;background:rgba(30,107,184,0.25);border:1px solid rgba(30,107,184,0.5);border-radius:4px;padding:4px 16px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#7BAFD4;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:28px;">
     SISTEM AKTIF · 4°S–12°S / 129°E–144°E · LAUT ARAFURA
   </div>
-  <h1 style="font-family:'Inter',sans-serif;font-size:72px;font-weight:800;color:#FFFFFF;letter-spacing:-0.04em;margin:0 0 6px;line-height:1;">LAUTAN</h1>
+  <h1 style="font-family:'Inter',sans-serif;font-size:72px;font-weight:800;color:#FFFFFF;letter-spacing:-0.04em;margin:0 0 6px;line-height:1;">OCEANA</h1>
   <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#7BAFD4;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:24px;">Platform Intelijen Oseanografi Papua</div>
   <div style="color:#A8C0D8;font-size:15px;max-width:560px;margin:0 auto 40px;line-height:1.8;">
     Data real-time multi-API, klimatologi historis 20 tahun,<br>dan prediksi berbasis Prediksi ML untuk kawasan Laut Arafura.
@@ -420,7 +420,7 @@ if st.session_state.page == "home":
 with st.sidebar:
     st.markdown("""
 <div style="padding:20px 0 12px;text-align:center;">
-  <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#FFFFFF;letter-spacing:0.12em;text-transform:uppercase;">LAUTAN</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#FFFFFF;letter-spacing:0.12em;text-transform:uppercase;">OCEANA</div>
   <div style="font-size:11px;color:#7BAFD4;margin-top:3px;letter-spacing:0.04em;">Ocean Intelligence Platform</div>
 </div>
 """, unsafe_allow_html=True)
