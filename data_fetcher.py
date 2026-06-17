@@ -57,9 +57,6 @@ def _klimatologi_bulan(month: int) -> dict:
     Nilai klimatologis rata-rata Laut Arafura per bulan.
     Digunakan sebagai fallback terakhir jika semua API gagal.
     """
-    # Pola musiman Laut Arafura:
-    # - Musim Timur (Jun-Sep): arus kuat ke barat, gelombang tinggi, chla naik
-    # - Musim Barat (Des-Mar): arus ke timur, gelombang sedang, SST tinggi
     t = 2 * np.pi * (month - 1) / 12
     return {
         "uo":        -0.06 + 0.04 * np.sin(t + 1.0),
@@ -115,7 +112,6 @@ def fetch_cmems(user: str, password: str) -> dict:
 
     for dataset_id in ERDDAP_PHY_DATASETS:
         url = f"https://nrt.cmems-du.eu/erddap/griddap/{dataset_id}.json"
-        # Ambil 1 titik tengah dulu untuk test koneksi
         lat_c = (LAT_MIN + LAT_MAX) / 2   # -8.0
         lon_c = (LON_MIN + LON_MAX) / 2   # 136.5
         query = (
@@ -147,42 +143,70 @@ def fetch_cmems(user: str, password: str) -> dict:
             print(f"[CMEMS] dataset {dataset_id} gagal: {str(e)[:60]}")
             continue
 
-    # ── B. Coba CMEMS untuk klorofil-a (dataset biologi) ─────────────────
+    # ── B. Coba CMEMS untuk klorofil-a (dataset biologi) — DIPERBAIKI ─────
     ERDDAP_BIO_DATASETS = [
-        # Dataset klorofil NRT global 4km
+        # Dataset utama NRT global 4km (nama aktif per 2024-2025)
         ("cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D", "CHL"),
-        # Dataset alternatif klorofil
+        # Nama lama (kadang masih aktif)
+        ("cmems_obs-oc_glo_bgc-plankton_my_l4-multi-4km_P1D", "CHL"),
+        # Dataset multi-sensor alternatif
         ("cmems_obs-oc_glo_bgc-optics_nrt_l3-multi-4km_P1D", "CHL"),
-        # Dataset klorofil regional
-        ("cmems_obs-oc_pac_bgc-plankton_nrt_l3-multi-1km_P1D", "CHL"),
     ]
 
-    date_str = (now - datetime.timedelta(days=2)).strftime("%Y-%m-%dT00:00:00")
+    # Coba mundur sampai 5 hari — data NRT butuh waktu proses 2-3 hari
+    date_candidates = [
+        (now - datetime.timedelta(days=d)).strftime("%Y-%m-%dT00:00:00")
+        for d in range(2, 7)   # coba D-2 sampai D-6
+    ]
 
     for dataset_id, var_name in ERDDAP_BIO_DATASETS:
         url = f"https://nrt.cmems-du.eu/erddap/griddap/{dataset_id}.json"
-        query = (
-            f"?{var_name}[({date_str}Z):1:({date_str}Z)]"
-            f"[({LAT_MIN}):4:({LAT_MAX})]"
-            f"[({LON_MIN}):4:({LON_MAX})]"
-        )
-        try:
-            resp = _get(url + query, auth=(user, password), timeout=30)
-            if resp.status_code == 200:
-                body  = resp.json()
-                col_n = body.get("table", {}).get("columnNames", [])
-                rows  = body.get("table", {}).get("rows", [])
-                if rows and var_name in col_n:
+
+        for date_str in date_candidates:
+            query = (
+                f"?{var_name}[({date_str}Z):1:({date_str}Z)]"
+                f"[({LAT_MIN}):4:({LAT_MAX})]"
+                f"[({LON_MIN}):4:({LON_MAX})]"
+            )
+            try:
+                resp = _get(url + query, auth=(user, password), timeout=40)
+
+                if resp.status_code == 404:
+                    # Dataset tidak ada di server ini, langsung skip ke dataset berikutnya
+                    break
+
+                if resp.status_code == 400:
+                    # Tanggal belum tersedia, coba mundur lagi
+                    continue
+
+                if resp.status_code == 200:
+                    body  = resp.json()
+                    col_n = body.get("table", {}).get("columnNames", [])
+                    rows  = body.get("table", {}).get("rows", [])
+
+                    if not rows or var_name not in col_n:
+                        # Respons kosong, coba tanggal sebelumnya
+                        continue
+
                     df_raw = pd.DataFrame(rows, columns=col_n)
                     v = pd.to_numeric(df_raw[var_name], errors="coerce").dropna()
                     v = v[(v > 0.001) & (v < 20)]
+
                     if len(v):
                         result["chla"] = float(np.clip(v.median(), 0.05, 0.8))
-                        print(f"[CMEMS] ✓ Klorofil dari dataset: {dataset_id}")
-                        break
-        except Exception as e:
-            print(f"[CMEMS] bio dataset {dataset_id} gagal: {str(e)[:60]}")
-            continue
+                        print(
+                            f"[CMEMS] ✓ Klorofil dari {dataset_id} "
+                            f"(tgl {date_str[:10]}): {result['chla']:.3f} mg/m³ "
+                            f"(n={len(v)})"
+                        )
+                        break  # tanggal ini berhasil, keluar dari loop tanggal
+
+            except Exception as e:
+                print(f"[CMEMS] bio {dataset_id} @ {date_str[:10]}: {str(e)[:60]}")
+                break  # connection error, skip ke dataset berikutnya
+
+        if "chla" in result:
+            break  # sudah dapat klorofil, tidak perlu coba dataset lain
 
     # ── C. Fallback WMS — minimal verifikasi koneksi + nilai approx ───────
     if not result:
@@ -195,7 +219,6 @@ def fetch_cmems(user: str, password: str) -> dict:
                         params={"SERVICE":"WMS","VERSION":"1.3.0","REQUEST":"GetCapabilities"},
                         timeout=15)
             if resp.status_code == 200:
-                # Koneksi OK tapi tidak dapat data riil → pakai klimatologis
                 klim = _klimatologi_bulan(now.month)
                 result.update(klim)
                 result["_source"] = "wms_klimatologi"
@@ -304,7 +327,6 @@ def fetch_nasa_modis(user: str, password: str) -> dict:
         rows      = resp_json.get("table", {}).get("rows", [])
         if not rows:
             return []
-        # Cari indeks kolom
         idx = col_names.index(var_col) if var_col in col_names else -1
         vals = []
         for r in rows:
@@ -317,12 +339,11 @@ def fetch_nasa_modis(user: str, password: str) -> dict:
         return vals
 
     for url_full, var_col, need_auth in PUBLIC_ERDDAP:
-        # Tentukan auth yang dipakai
         auth_opts = []
         if need_auth:
-            auth_opts = [(user, password)]   # hanya coba dengan auth
+            auth_opts = [(user, password)]
         else:
-            auth_opts = [None, (user, password)]  # coba tanpa auth dulu
+            auth_opts = [None, (user, password)]
 
         for auth in auth_opts:
             try:
@@ -344,22 +365,18 @@ def fetch_nasa_modis(user: str, password: str) -> dict:
                                 "error": None}
 
                 elif resp.status_code == 404:
-                    # Dataset tidak ada di server ini, langsung skip
                     break
                 elif resp.status_code in (401, 403) and auth is None:
-                    # Butuh auth, coba sekali lagi dengan kredensial
                     continue
                 else:
                     print(f"[MODIS] HTTP {resp.status_code} dari {url_full[:60]}")
 
             except Exception as e:
                 print(f"[MODIS] Error: {str(e)[:70]}")
-                break  # timeout/connection error, skip ke endpoint berikutnya
+                break
 
     # ── Fallback: estimasi musiman Laut Arafura ────────────────────────────
-    # Pola klorofil Arafura: puncak saat Musim Timur (Jun-Sep) karena upwelling
     month = now.month
-    # Fungsi sinusoidal: min ~0.15 mg/m³ (Feb-Mar), maks ~0.35 mg/m³ (Jul-Ags)
     chla_est = 0.22 + 0.13 * np.sin(2 * np.pi * (month - 2) / 12)
     chla_est = float(np.clip(chla_est, 0.05, 0.5))
 
@@ -382,25 +399,12 @@ def fetch_era5(cds_uid: str, cds_key: str) -> dict:
     Urutan prioritas:
       1. Open-Meteo (gratis, tanpa akun, near-real-time) ← utama
       2. ERA5 via CDS API (butuh akun + CDS_UID terisi)  ← jika UID ada
-
-    Kenapa Open-Meteo jadi prioritas:
-    - ERA5 delay 5-7 hari dari hari ini (bukan real-time sejati)
-    - Open-Meteo pakai model GFS/IFS yang lebih near-real-time
-    - Tidak butuh install cdsapi atau akun CDS
-    - Gratis dan sangat stabil (99.9% uptime)
-
-    Kalau tetap mau pakai ERA5:
-      1. Daftar di https://cds.climate.copernicus.eu
-      2. Profil → API Key → copy UID (angka) dan Key
-      3. Isi CDS_UID dan CDS_KEY di config.py
     """
-    # ── Prioritas 1: Open-Meteo (selalu dicoba dulu) ───────────────────────
     print("[ERA5] Mencoba Open-Meteo...")
     result_om = _fetch_openmeteo_wind()
     if result_om["ok"]:
         return result_om
 
-    # ── Prioritas 2: ERA5 via CDS (jika UID tersedia) ─────────────────────
     uid_str = str(cds_uid).strip()
     if uid_str and uid_str not in ("", "0", "ISI_UID_KAMU"):
         print(f"[ERA5] Mencoba CDS API dengan UID: {uid_str[:6]}...")
@@ -441,7 +445,6 @@ def _fetch_openmeteo_wind() -> dict:
                 if wspd is not None and wdir is not None:
                     rad = np.radians(float(wdir))
                     spd = float(wspd)
-                    # Konvensi meteorologi: angin dari arah wdir
                     all_u.append(-spd * np.sin(rad))
                     all_v.append(-spd * np.cos(rad))
         except Exception:
@@ -534,7 +537,6 @@ def _fetch_era5_cds(uid: str, key: str) -> dict:
                 v10  = _m(ds, "v10", "v10m") or -0.5
                 wave = _m(ds, "swh", "shww") or 0.8
         except ImportError:
-            # Kalau netCDF4 tidak ada, coba baca pakai xarray
             try:
                 import xarray as xr
                 ds = xr.open_dataset(tmp_nc)
@@ -577,18 +579,11 @@ def fetch_bmkg() -> dict:
       1. data.bmkg.go.id — JSON maritim resmi
       2. inaoc.bmkg.go.id — sistem peringatan dini gelombang
       3. Open-Meteo Marine — fallback gratis jika BMKG down
-
-    BMKG sering down atau ganti format → fallback Open-Meteo sudah disiapkan.
     """
-    # ── Endpoint BMKG ────────────────────────────────────────────────────────
     BMKG_URLS = [
-        # JSON maritim baru
         "https://data.bmkg.go.id/DataMKG/MEWS/maritim/ombakLaut.json",
-        # JSON prakiraan cuaca maritim
         "https://data.bmkg.go.id/DataMKG/MEWS/maritim/maritim.json",
-        # XML maritim (fallback)
         "https://data.bmkg.go.id/DataMKG/MEWS/maritim/maritim.xml",
-        # Endpoint lama
         "https://inaoc.bmkg.go.id/DataOlahan/gelombangLaut",
     ]
 
@@ -600,7 +595,6 @@ def fetch_bmkg() -> dict:
 
             text = resp.text.strip()
 
-            # ── Parse JSON ──
             if text.startswith("{") or text.startswith("["):
                 try:
                     data = resp.json()
@@ -614,7 +608,6 @@ def fetch_bmkg() -> dict:
                 except Exception:
                     pass
 
-            # ── Parse XML/HTML: regex ──
             vals = _bmkg_extract_text(text)
             if vals:
                 wave = float(np.clip(np.mean(vals), 0.2, 2.5))
@@ -671,14 +664,12 @@ def _bmkg_extract_json(data) -> list:
         return vals
     if not isinstance(data, dict):
         return vals
-    # Field-field yang umum di JSON BMKG
     for field in ("tinggiGelombang","wave_height","gelombang","tinggi",
                   "waveHeight","tinggiGelombangMax","tinggiGelombangMin"):
         val = data.get(field)
         if val is not None:
             parsed = _parse_wave_str(str(val))
             vals.extend(parsed)
-    # Rekursif ke nested dict/list
     for v in data.values():
         if isinstance(v, (dict, list)):
             vals.extend(_bmkg_extract_json(v))
@@ -753,7 +744,6 @@ def build_realtime_dataframe(cmems_user: str, cmems_pass: str,
     now      = datetime.datetime.utcnow()
     klim     = _klimatologi_bulan(now.month)
 
-    # ── Nilai awal = klimatologis (akan dioverride oleh API yang berhasil) ──
     merged = {
         **klim,
         "time":  pd.Timestamp(now),
