@@ -149,18 +149,60 @@ df = load_data()
 df["year"]          = df["time"].dt.year
 df["month"]         = df["time"].dt.month
 df["current_speed"] = np.sqrt(df["uo"]**2 + df["vo"]**2)
+
+
+# =========================================
+# SUITABILITAS OPTIMAL (kurva trapesium)
+# =========================================
+def suitabilitas_optimal(x, lo, opt_lo, opt_hi, hi):
+    """
+    Skor kesesuaian 0..1 berbentuk trapesium:
+      0  bila x <= lo  atau  x >= hi
+      1  bila opt_lo <= x <= opt_hi   (zona optimal)
+      naik/turun linear di antaranya.
+    Dipakai untuk parameter dengan 'rentang ideal' — mis. chl-a untuk kesehatan
+    ekosistem (terlalu rendah = tandus, terlalu tinggi = gejala eutrofikasi) atau
+    SST untuk habitat termal ikan — berbeda dari parameter "makin tinggi makin
+    baik" yang tetap memakai normalisasi_global.
+    """
+    x = np.asarray(x, dtype=float)
+    naik  = np.clip((x - lo)  / max(opt_lo - lo, 1e-9), 0.0, 1.0)   # ramp 0->1
+    turun = np.clip((hi - x)  / max(hi - opt_hi, 1e-9), 0.0, 1.0)   # ramp 1->0
+    return np.minimum(naik, turun)
+
+
+# =========================================================================
+# OCEAN HEALTH INDEX — indeks KONDISI / kualitas perairan.
+# Mengacu konsep Ocean Health Index (Halpern dkk., 2012, Nature) yang menilai
+# kondisi ekosistem, bukan hasil tangkapan. Penekanan pada oksigen terlarut & pH
+# (acidifikasi). chl-a dinilai sebagai KESEIMBANGAN TROFIK: terlalu rendah =
+# perairan tandus, terlalu tinggi = gejala eutrofikasi/blooming. Ambang trofik
+# chl-a laut: oligotrofik <0.1, eutrofik >=1.0 mg/m3 (Antoine dkk., 1996; NASA OBPG).
+# =========================================================================
 df["Ocean_Health_Index"] = (
-    0.25 * normalisasi_global(df["do"],       4.5, 7.5) +
-    0.20 * normalisasi_global(df["ph"],       7.9, 8.4) +
-    0.20 * normalisasi_global(df["chla"],     0.05, 0.8) +
-    0.15 * normalisasi_global(df["salinitas"],32.0, 36.5) +
-    0.20 * (1 - normalisasi_global(df["gelombang"], 0.2, 2.5))
+    0.30 * normalisasi_global(df["do"], 4.5, 7.5) +                       # oksigen terlarut (anti-hipoksia)
+    0.25 * normalisasi_global(df["ph"], 7.9, 8.4) +                       # pH (anti-acidifikasi)
+    0.20 * suitabilitas_optimal(df["chla"], 0.05, 0.10, 0.40, 0.80) +     # trofik seimbang (bukan makin tinggi makin baik)
+    0.15 * suitabilitas_optimal(df["salinitas"], 32.0, 33.5, 35.0, 36.5) +# salinitas dalam rentang laut alami
+    0.10 * suitabilitas_optimal(df["sst"], 22.0, 26.0, 30.0, 32.0)        # cekaman termal (risiko >31 C)
 ) * 100
+
+# =========================================================================
+# FISHERIES INDEX — indeks ZONA POTENSI PENANGKAPAN IKAN (ZPPI/PFZ).
+# Mengikuti pendekatan Potential Fishing Zone INCOIS/BROL yang memakai chl-a +
+# SST sebagai dua variabel utama. chl-a positif (produktivitas/pakan), SST sebagai
+# jendela termal habitat pelagis tropis (~28-30 C optimal), ditambah DO, kecepatan
+# arus (transport nutrien/front tempat ikan berkumpul), dan gelombang sebagai
+# faktor operasional/keselamatan (negatif).
+# Catatan: chl-a & DO sengaja menjadi irisan kedua indeks → keduanya berkorelasi
+# tetapi tidak identik (FSI memuat SST+arus, OHI memuat pH+penalti eutrofikasi).
+# =========================================================================
 df["Fisheries_Index"] = (
-    0.35 * normalisasi_global(df["chla"],        0.05, 0.8) +
-    0.25 * normalisasi_global(df["do"],           4.5, 7.5) +
-    0.20 * normalisasi_global(df["current_speed"],0.0, 0.25) +
-    0.20 * (1 - normalisasi_global(df["gelombang"],0.2, 2.5))
+    0.35 * normalisasi_global(df["chla"], 0.05, 0.8) +                    # produktivitas primer (pakan)
+    0.25 * suitabilitas_optimal(df["sst"], 24.0, 28.0, 30.0, 33.0) +      # jendela termal habitat ikan
+    0.20 * normalisasi_global(df["do"], 4.5, 7.5) +                       # ketersediaan oksigen
+    0.10 * normalisasi_global(df["current_speed"], 0.0, 0.25) +           # arus/front pengumpul ikan
+    0.10 * (1 - normalisasi_global(df["gelombang"], 0.2, 2.5))            # gelombang (operasional, negatif)
 ) * 100
 
 # =========================================
@@ -510,7 +552,7 @@ with st.sidebar:
     # ── SIDEBAR: Prediksi ────────────────────────────────────
     else:
         st.markdown("""
-<div class="data-note">🤖 Prediksi menggunakan Prophet (Meta/Facebook) dilatih pada data historis 2001–2020.</div>
+<div class="data-note">🤖 Prediksi menggunakan Prediksi (Meta/Facebook) dilatih pada data historis 2001–2020.</div>
 """, unsafe_allow_html=True)
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         bulan_pred = st.selectbox("TARGET BULAN PREDIKSI",
@@ -873,18 +915,19 @@ elif mode == "Real Time":
         df_rt["current_speed"] = np.sqrt(df_rt["uo"]**2 + df_rt["vo"]**2)
     if "Ocean_Health_Index" not in df_rt.columns:
         df_rt["Ocean_Health_Index"] = (
-            0.25 * normalisasi_global(df_rt["do"],        4.5,  7.5) +
-            0.20 * normalisasi_global(df_rt["ph"],        7.9,  8.4) +
-            0.20 * normalisasi_global(df_rt["chla"],      0.05, 0.8) +
-            0.15 * normalisasi_global(df_rt["salinitas"], 32.0, 36.5) +
-            0.20 * (1 - normalisasi_global(df_rt["gelombang"], 0.2, 2.5))
+            0.30 * normalisasi_global(df_rt["do"], 4.5, 7.5) +
+            0.25 * normalisasi_global(df_rt["ph"], 7.9, 8.4) +
+            0.20 * suitabilitas_optimal(df_rt["chla"], 0.05, 0.10, 0.40, 0.80) +
+            0.15 * suitabilitas_optimal(df_rt["salinitas"], 32.0, 33.5, 35.0, 36.5) +
+            0.10 * suitabilitas_optimal(df_rt["sst"], 22.0, 26.0, 30.0, 32.0)
         ) * 100
     if "Fisheries_Index" not in df_rt.columns:
         df_rt["Fisheries_Index"] = (
-            0.35 * normalisasi_global(df_rt["chla"],          0.05, 0.8) +
-            0.25 * normalisasi_global(df_rt["do"],            4.5,  7.5) +
-            0.20 * normalisasi_global(df_rt["current_speed"], 0.0,  0.25) +
-            0.20 * (1 - normalisasi_global(df_rt["gelombang"], 0.2, 2.5))
+            0.35 * normalisasi_global(df_rt["chla"], 0.05, 0.8) +
+            0.25 * suitabilitas_optimal(df_rt["sst"], 24.0, 28.0, 30.0, 33.0) +
+            0.20 * normalisasi_global(df_rt["do"], 4.5, 7.5) +
+            0.10 * normalisasi_global(df_rt["current_speed"], 0.0, 0.25) +
+            0.10 * (1 - normalisasi_global(df_rt["gelombang"], 0.2, 2.5))
         ) * 100
 
     # ── Build spatial grid dari nilai rata-rata RT ───────────
