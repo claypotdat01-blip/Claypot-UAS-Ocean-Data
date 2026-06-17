@@ -7,7 +7,10 @@ Sumber data real-time:
   · ERA5 / CDS    : angin permukaan (angin_u / angin_v)
   · BMKG          : tinggi gelombang signifikan
 
-NASA MODIS dihapus dari pipeline real-time karena akses sulit.
+NASA MODIS dihapus dari pipeline real-time karena API/akses sulit
+dibuka (sering timeout / butuh autentikasi Earthdata terpisah).
+Klorofil-a sekarang 100% diambil dari CMEMS Ocean Colour, yang
+memakai kredensial yang sama dengan CMEMS Fisika (CMEMS_USER/PASS).
 ============================================================
 """
 
@@ -44,9 +47,9 @@ def fetch_cmems(cmems_user: str, cmems_pass: str) -> dict:
     Analysis and Forecast.
 
     Dataset yang digunakan:
-      - Arus   : cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i  (var: uo, vo)
-      - SST    : cmems_mod_glo_phy-thetao_anfc_0.083deg_PT6H-i (var: thetao)
-      - Salinitas: cmems_mod_glo_phy-so_anfc_0.083deg_PT6H-i  (var: so)
+      - Arus     : cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i   (var: uo, vo)
+      - SST      : cmems_mod_glo_phy-thetao_anfc_0.083deg_PT6H-i (var: thetao)
+      - Salinitas: cmems_mod_glo_phy-so_anfc_0.083deg_PT6H-i     (var: so)
 
     Mengembalikan dict scalar rata-rata area Laut Arafura.
     """
@@ -105,6 +108,9 @@ def fetch_cmems(cmems_user: str, cmems_pass: str) -> dict:
         sal_val = float(ds_sal["so"].mean())
         ds_sal.close()
 
+        print(f"[CMEMS Fisika] OK → uo={uo_val:.3f}, vo={vo_val:.3f}, "
+              f"SST={sst_val:.2f}, SAL={sal_val:.2f}")
+
         return {
             "ok"       : True,
             "uo"       : uo_val,
@@ -128,25 +134,26 @@ def fetch_cmems(cmems_user: str, cmems_pass: str) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────
-# 2. CMEMS KLOROFIL-A  ← menggantikan fetch_nasa_modis
+# 2. CMEMS KLOROFIL-A  — pengganti NASA MODIS
 # ─────────────────────────────────────────────────────────────
 def fetch_cmems_chla(cmems_user: str, cmems_pass: str) -> dict:
     """
-    Ambil klorofil-a dari CMEMS Ocean Colour (satelit L4 gap-free).
+    Ambil klorofil-a dari CMEMS Ocean Colour (produk Copernicus-GlobColour,
+    L4 gap-free, multi-sensor 4km, resolusi harian).
 
-    Dataset utama (NRT — Near Real Time):
-      cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D
-      Variabel: CHL (mg/m³)
-      Lag data : ~1–2 hari
+    Dataset dicoba berurutan (yang pertama berhasil langsung dipakai):
+      1. NRT (Near Real Time) — lag ~1-2 hari, dataset paling baru
+         cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D
+      2. MY  (Multi-Year/reprocessed) — lag lebih lama, lebih stabil
+         cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D
 
-    Fallback jika NRT tidak tersedia (dataset MY — multi-year reprocessed):
-      cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D
-      Lag data : ~2–4 minggu
+    Variabel yang diambil: CHL (mg/m³)
+    Rentang waktu: 7 hari ke belakang, untuk mengantisipasi lag produk
+    satelit / hari tanpa data karena tutupan awan.
 
-    Rentang waktu diambil 7 hari ke belakang untuk memastikan
-    ada data meskipun ada lag produk satelit.
+    Memakai kredensial CMEMS yang sama dengan fetch_cmems() —
+    TIDAK butuh akun NASA Earthdata sama sekali.
     """
-    # Dataset NRT diutamakan, MY sebagai fallback
     DATASETS = [
         "cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D",
         "cmems_obs-oc_glo_bgc-plankton_my_l4-gapfree-multi-4km_P1D",
@@ -174,6 +181,9 @@ def fetch_cmems_chla(cmems_user: str, cmems_pass: str) -> dict:
             chla_raw = float(ds["CHL"].mean())
             ds.close()
 
+            if np.isnan(chla_raw):
+                raise ValueError("Nilai CHL kosong (NaN) untuk rentang waktu/wilayah ini")
+
             # Clip ke rentang realistis Laut Arafura
             chla_val = float(np.clip(chla_raw, 0.05, 0.8))
 
@@ -190,21 +200,7 @@ def fetch_cmems_chla(cmems_user: str, cmems_pass: str) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────
-# 3. NASA MODIS — TIDAK DIGUNAKAN (dipertahankan agar tidak
-#    memecah import di kode lama yang mungkin masih merujuk)
-# ─────────────────────────────────────────────────────────────
-def fetch_nasa_modis(nasa_user: str = "", nasa_pass: str = "") -> dict:
-    """
-    [DEPRECATED] Sumber klorofil-a sekarang menggunakan CMEMS.
-    Fungsi ini dipertahankan hanya untuk kompatibilitas mundur.
-    Selalu mengembalikan fallback tanpa memanggil API apapun.
-    """
-    print("[NASA MODIS] DEPRECATED — gunakan fetch_cmems_chla sebagai gantinya.")
-    return {"ok": False, "chla": 0.22}
-
-
-# ─────────────────────────────────────────────────────────────
-# 4. ERA5 / CDS — angin permukaan (angin_u / angin_v)
+# 3. ERA5 / CDS — angin permukaan (angin_u / angin_v)
 # ─────────────────────────────────────────────────────────────
 def fetch_era5(cds_uid: str, cds_key: str) -> dict:
     """
@@ -262,7 +258,7 @@ def fetch_era5(cds_uid: str, cds_key: str) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────
-# 5. BMKG — tinggi gelombang signifikan
+# 4. BMKG — tinggi gelombang signifikan
 # ─────────────────────────────────────────────────────────────
 def fetch_bmkg() -> dict:
     """
@@ -302,13 +298,13 @@ def fetch_bmkg() -> dict:
 
 
 # ─────────────────────────────────────────────────────────────
-# 6. BUILD REALTIME DATAFRAME — fungsi utama dipanggil app.py
+# 5. BUILD REALTIME DATAFRAME — fungsi utama dipanggil app.py
 # ─────────────────────────────────────────────────────────────
 def build_realtime_dataframe(
     cmems_user: str,
     cmems_pass: str,
-    nasa_user : str = "",   # tidak dipakai, dipertahankan agar signature lama tidak patah
-    nasa_pass : str = "",
+    nasa_user : str = "",   # sudah tidak dipakai — dipertahankan agar
+    nasa_pass : str = "",   # signature lama (app.py) tidak patah
     cds_uid   : str = "",
     cds_key   : str = "",
 ) -> dict:
@@ -320,8 +316,9 @@ def build_realtime_dataframe(
           'status': dict          (nama_api → bool),
         }
 
-    Jika suatu API gagal, nilai fallback klimatologis digunakan
-    sehingga aplikasi tetap berjalan.
+    Klorofil-a SEKARANG diambil dari CMEMS (fetch_cmems_chla), BUKAN
+    dari NASA MODIS lagi. Jika suatu API gagal, nilai fallback
+    klimatologis digunakan sehingga aplikasi tetap berjalan.
     """
 
     # ── panggil semua sumber ──────────────────────────────
@@ -337,12 +334,12 @@ def build_realtime_dataframe(
     print("[build_realtime_dataframe] Menghubungi BMKG...")
     r_bmkg  = fetch_bmkg()
 
-    # ── status koneksi per API ────────────────────────────
+    # ── status koneksi per API (ditampilkan di sidebar) ───
     status = {
-        "CMEMS (Fisika)"       : r_cmems["ok"],
-        "CMEMS (Klorofil-a)"   : r_chla["ok"],
-        "ERA5 / ECMWF"         : r_era5["ok"],
-        "BMKG"                 : r_bmkg["ok"],
+        "CMEMS (Fisika)"     : r_cmems["ok"],
+        "CMEMS (Klorofil-a)" : r_chla["ok"],
+        "ERA5 / ECMWF"       : r_era5["ok"],
+        "BMKG"               : r_bmkg["ok"],
     }
 
     # ── derivasi DO dan pH (tidak ada API langsung) ───────
@@ -365,7 +362,7 @@ def build_realtime_dataframe(
         "sst"      : sst_val,
         "ssta"     : r_cmems["ssta"],
         "salinitas": sal_val,
-        # Klorofil-a — CMEMS Ocean Colour (sebelumnya NASA MODIS)
+        # Klorofil-a — CMEMS Ocean Colour (pengganti NASA MODIS)
         "chla"     : r_chla["chla"],
         # Derivasi
         "do"       : do_val,
