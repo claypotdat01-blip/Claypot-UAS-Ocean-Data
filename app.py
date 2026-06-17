@@ -676,27 +676,70 @@ if mode == "Historis":
             st.markdown(f"""<span class="coord-tag">4°S – 12°S</span><span class="coord-tag">129°E – 144°E</span><span class="coord-tag">Grid 100×80 · Laut Arafura</span>""", unsafe_allow_html=True)
 
         with tabs[1]:
-            df_ts = df.groupby("time")[parameter].mean().reset_index()
-            y_vals  = df_ts[parameter].to_numpy(dtype=float)
-            z       = np.polyfit(range(len(df_ts)), y_vals, 1)
-            y_trend = np.poly1d(z)(range(len(df_ts)))
-            y_lo = float(min(y_vals.min(), y_trend.min()))
-            y_hi = float(max(y_vals.max(), y_trend.max()))
-            span = y_hi - y_lo
-            pad  = span * 0.08 if span > 0 else (abs(y_hi) * 0.08 if y_hi else 1.0)
+            st.markdown(f'<div class="section-label">TREN TEMPORAL 2001–2020 · {PARAM_LABELS.get(parameter, parameter)}</div>', unsafe_allow_html=True)
 
-            fig_ts = go.Figure()
-            fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_vals, mode="lines",
-                name=PARAM_LABELS.get(parameter, parameter),
-                line=dict(color="#1E6BB8", width=1.8)))
-            fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_trend, mode="lines",
-                name="Tren Linear", line=dict(color="#D4811A", width=2, dash="dot")))
-            fig_ts.update_layout(**PLOTLY_LAYOUT,
-                title=f"Tren Temporal 2001–2020 · {PARAM_LABELS.get(parameter,parameter)}",
-                legend=dict(font=dict(color="#3A5070",size=11), bgcolor="rgba(255,255,255,0.9)", bordercolor="#D6E4F0", borderwidth=1),
-                height=400)
-            fig_ts.update_yaxes(range=[y_lo-pad, y_hi+pad], autorange=False)
-            st.plotly_chart(fig_ts, use_container_width=True)
+            # 1) Agregasi ke rata-rata BULANAN.
+            #    .resample("MS") menjamin satu titik per bulan & terurut, walau CSV
+            #    ternyata harian / banyak baris per timestamp (penyebab grafik "kacau").
+            serie = (
+                df.loc[:, ["time", parameter]]
+                  .dropna(subset=[parameter])
+                  .set_index("time")
+                  .sort_index()[parameter]
+                  .resample("MS").mean()
+                  .dropna()
+            )
+            df_ts  = serie.reset_index()
+            df_ts.columns = ["time", parameter]
+            y_vals = df_ts[parameter].to_numpy(dtype=float)
+
+            if len(df_ts) < 2:
+                st.info("Data tidak cukup untuk menampilkan time series pada periode ini.")
+            else:
+                x_idx = np.arange(len(df_ts))
+
+                # 2) Tren linear (least-squares) — aman dari NaN karena sudah di-dropna.
+                z = np.polyfit(x_idx, y_vals, 1)
+                y_trend = np.poly1d(z)(x_idx)
+                slope_per_year = z[0] * 12.0
+                arah_tren = "↑" if slope_per_year > 0 else "↓"
+
+                # 3) Rata-rata bergerak 12 bulan → garis halus yang membuang derau musiman.
+                roll = df_ts[parameter].rolling(window=12, center=True, min_periods=3).mean().to_numpy()
+
+                fig_ts = go.Figure()
+                fig_ts.add_trace(go.Scatter(
+                    x=df_ts["time"], y=y_vals, mode="lines",
+                    name=PARAM_LABELS.get(parameter, parameter),
+                    line=dict(color="#1E6BB8", width=1.3), opacity=0.75))
+                fig_ts.add_trace(go.Scatter(
+                    x=df_ts["time"], y=roll, mode="lines",
+                    name="Rata-rata 12 bulan",
+                    line=dict(color="#0D3D6B", width=2.6), connectgaps=True))
+                fig_ts.add_trace(go.Scatter(
+                    x=df_ts["time"], y=y_trend, mode="lines",
+                    name=f"Tren linear ({arah_tren} {abs(slope_per_year):.4f}/th)",
+                    line=dict(color="#D4811A", width=2, dash="dot")))
+
+                # 4) Rentang-y dinamis dari nilai finit saja (bukan dipaksa ke 0).
+                finite = np.concatenate([y_vals, y_trend, roll[~np.isnan(roll)]])
+                y_lo, y_hi = float(np.min(finite)), float(np.max(finite))
+                span = y_hi - y_lo
+                pad  = span * 0.10 if span > 0 else (abs(y_hi) * 0.05 if y_hi else 1.0)
+
+                fig_ts.update_layout(**PLOTLY_LAYOUT,
+                    title=f"Tren Temporal 2001–2020 · {PARAM_LABELS.get(parameter,parameter)}",
+                    legend=dict(font=dict(color="#3A5070",size=11), bgcolor="rgba(255,255,255,0.9)",
+                                bordercolor="#D6E4F0", borderwidth=1,
+                                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                    height=420)
+                fig_ts.update_yaxes(range=[y_lo-pad, y_hi+pad], autorange=False)
+                st.plotly_chart(fig_ts, use_container_width=True)
+
+                st.markdown(
+                    '<div class="data-note">Garis tipis = rata-rata spasial bulanan · '
+                    'garis tebal = rata-rata bergerak 12 bulan (membuang siklus musiman) · '
+                    'garis putus-putus = tren linear.</div>', unsafe_allow_html=True)
 
         with tabs[2]:
             desc = df_map[[parameter]].describe()
