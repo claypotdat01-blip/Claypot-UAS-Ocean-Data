@@ -614,7 +614,10 @@ if mode == "Historis":
                 if status["text"] == "SANGAT BAIK":
                     st.success(f"**Area oranye/merah direkomendasikan.** Nutrisi laut melimpah — turunkan jaring di perairan dalam Arafura. Arus dominan menuju **{arah_arus}** {ikon_arus}, angin bertiup dari **{arah_angin}** {ikon_angin}.")
                 elif status["text"] == "NORMAL":
-                    st.info(f"**Kondisi normal.** Ikan bergerak mengikuti arus — ikuti arah arus ke **{arah_arus}** {ikon_arus}. Angin bertiup dari **{arah_angin}** {ikon_angin}, sesuaikan posisi perahu agar tidak melawan arus.")
+                    st.info(f"**Kondisi normal.<br> 
+                    Ikan bergerak mengikuti arus <br>
+                    ikuti arah arus ke **{arah_arus}** {ikon_arus}. <br> 
+                    Angin bertiup dari **{arah_angin}** {ikon_angin}, sesuaikan posisi perahu agar tidak melawan arus.")
                 else:
                     st.warning(f"**Potensi tangkapan rendah.** Disarankan memancing di pesisir dekat teluk dan muara sungai. Waspadai arus ke **{arah_arus}** {ikon_arus} dan angin dari **{arah_angin}** {ikon_angin}.")
             with col_r2:
