@@ -492,18 +492,6 @@ with st.sidebar:
         if st.session_state.api_status:
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
             st.markdown("**Status Koneksi API:**")
-            # Tampilkan semua kecuali NASA MODIS (selalu False, sudah dinonaktifkan)
-            for api_name, ok in st.session_state.api_status.items():
-                icon  = "🟢" if ok else "🔴"
-                label = "Terhubung" if ok else "Gagal"
-                # Tampilkan pesan error jika gagal
-                err_msg = st.session_state.api_errors.get(api_name, "")
-                err_hint = f" · <i>{err_msg[:50]}</i>" if (not ok and err_msg) else ""
-                st.markdown(
-                    f"<span style='font-size:11px;font-family:monospace'>{icon} {api_name} — {label}{err_hint}</span>",
-                    unsafe_allow_html=True
-                )
-
         if st.session_state.last_update:
             wib = st.session_state.last_update + datetime.timedelta(hours=7)
             st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
