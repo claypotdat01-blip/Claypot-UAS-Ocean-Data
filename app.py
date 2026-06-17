@@ -732,11 +732,9 @@ if mode == "Historis":
 
         # ── FIX: Time Series ─────────────────────────────────
         with tabs[1]:
-            # Gunakan df asli (CSV) — bukan df_map yang merupakan grid sintetis
             df_ts = df.groupby("time")[parameter].mean().reset_index()
             y_vals = df_ts[parameter].to_numpy(dtype=float)
-
-            # Guard: minimal 2 titik agar polyfit tidak crash
+        
             if len(y_vals) >= 2:
                 z = np.polyfit(range(len(df_ts)), y_vals, 1)
                 y_trend = np.poly1d(z)(range(len(df_ts)))
@@ -745,29 +743,72 @@ if mode == "Historis":
                 y_trend = y_vals.copy()
                 slope_label = "Tren"
                 z = [0, 0]
-
+        
             y_lo = float(min(y_vals.min(), y_trend.min()))
             y_hi = float(max(y_vals.max(), y_trend.max()))
             span = y_hi - y_lo
-
-            # Padding 10% dari range; fallback absolut jika span=0
-            if span > 0:
-                pad = span * 0.10
-            else:
-                pad = abs(y_hi) * 0.05 if abs(y_hi) > 0 else 0.01
-
+            pad  = span * 0.10 if span > 0 else (abs(y_hi) * 0.05 if abs(y_hi) > 0 else 0.01)
+        
             fig_ts = go.Figure()
-
-            # Garis historis dengan area fill tipis
             fig_ts.add_trace(go.Scatter(
-                x=df_ts["time"],
-                y=y_vals,
+                x=df_ts["time"], y=y_vals,
                 mode="lines",
                 name=PARAM_LABELS_CLEAN.get(parameter, parameter),
                 line=dict(color="#1E6BB8", width=2),
                 fill="tozeroy",
                 fillcolor="rgba(30,107,184,0.07)",
             ))
+            if len(y_vals) >= 2:
+                fig_ts.add_trace(go.Scatter(
+                    x=df_ts["time"], y=y_trend,
+                    mode="lines", name=slope_label,
+                    line=dict(color="#D4811A", width=2, dash="dot"),
+                ))
+            if not df_hist.empty:
+                df_highlight = df_ts[df_ts["time"].isin(df_hist["time"])]
+                if not df_highlight.empty:
+                    fig_ts.add_trace(go.Scatter(
+                        x=df_highlight["time"],
+                        y=df_highlight[parameter].to_numpy(dtype=float),
+                        mode="markers",
+                        name=f"Periode: {waktu_label}",
+                        marker=dict(color="#E85A0C", size=8,
+                                    line=dict(color="#FFFFFF", width=1.5)),
+                    ))
+        
+            # Buat xaxis baru dengan merge manual — tidak double-key dengan PLOTLY_LAYOUT
+            xaxis_ts = {**PLOTLY_LAYOUT["xaxis"],
+                "rangeslider": dict(visible=True, thickness=0.06),
+                "rangeselector": dict(
+                    buttons=[
+                        dict(count=2,  label="2T",  step="year", stepmode="backward"),
+                        dict(count=5,  label="5T",  step="year", stepmode="backward"),
+                        dict(count=10, label="10T", step="year", stepmode="backward"),
+                        dict(step="all", label="Semua"),
+                    ],
+                    bgcolor="#EBF3FB", activecolor="#1E6BB8",
+                    font=dict(size=11, color="#0D1F33"),
+                ),
+            }
+        
+            # Unpack PLOTLY_LAYOUT tapi exclude xaxis, lalu pasang xaxis_ts sendiri
+            layout_base = {k: v for k, v in PLOTLY_LAYOUT.items() if k != "xaxis"}
+            fig_ts.update_layout(
+                **layout_base,
+                xaxis=xaxis_ts,
+                title=f"Tren Temporal 2001–2020 · {PARAM_LABELS_CLEAN.get(parameter, parameter)}",
+                legend=dict(font=dict(color="#3A5070", size=11),
+                            bgcolor="rgba(255,255,255,0.9)",
+                            bordercolor="#D6E4F0", borderwidth=1),
+                height=420,
+                hovermode="x unified",
+            )
+            fig_ts.update_yaxes(range=[y_lo - pad, y_hi + pad], autorange=False)
+            st.plotly_chart(fig_ts, use_container_width=True)
+            st.caption(
+                f"Sumber: Data historis CSV 2001–2020 · {len(df_ts)} titik data bulanan"
+                + (f" · Tren: {z[0] * 12:+.5f}/tahun" if len(y_vals) >= 2 else "")
+            )
 
             # Tren linear
             if len(y_vals) >= 2:
