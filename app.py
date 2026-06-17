@@ -494,8 +494,8 @@ with st.sidebar:
             st.markdown("**Status Koneksi API:**")
             # Tampilkan semua kecuali NASA MODIS (selalu False, sudah dinonaktifkan)
             for api_name, ok in st.session_state.api_status.items():
-                icon  = "🟢" if ok 
-                label = "Terhubung" if ok 
+                icon  = "🟢" 
+                label = "Terhubung" 
                 # Tampilkan pesan error jika gagal
                 err_msg = st.session_state.api_errors.get(api_name, "")
                 err_hint = f" · <i>{err_msg[:50]}</i>" 
