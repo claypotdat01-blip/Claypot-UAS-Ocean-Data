@@ -951,7 +951,7 @@ if st.session_state.role == "nelayan":
 
         st.markdown(f"""
 <div class="data-note">
-  🧭 Arus: <b>{dir_arus}</b> ({deg_arus:.0f}°) · {spd_arus:.4f} m/s &nbsp;|&nbsp;
+  🧭 Arus: <b>{dir_arus}</b> ({deg_arus:.0f}°) · {spd_arus:.4f} m/s <br>
   💨 Angin dari: <b>{dir_angin}</b> ({deg_angin:.0f}°)<br>
   🌊 Gelombang: <b>{dir_gelombang}</b> ({deg_gelombang:.0f}°) · {wave_mean:.2f} m
 </div>
