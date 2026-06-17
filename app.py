@@ -2,7 +2,7 @@
 LAUTAN — Platform Intelijen Oseanografi Papua
 ============================================================
 Real-Time  : CMEMS (arus/SST/salinitas/klorofil-a) · ERA5/Open-Meteo (angin) · BMKG (gelombang)
-             NASA MODIS DINONAKTIFKAN — Chl-a dari CMEMS bio dataset
+            Chl-a dari CMEMS bio dataset
 Historis   : rangkuman_historis_20tahun.csv  (fallback: data sintetis)
 Prediksi   : Prophet (Facebook/Meta)
 ============================================================
@@ -470,7 +470,7 @@ with st.sidebar:
 · ERA5/Open-Meteo (angin)<br>
 · BMKG/Open-Meteo (gelombang)<br>
 <br>
-<i>Chl-a kini dari CMEMS Ocean Colour,<br>bukan NASA MODIS.</i></div>
+<i>Chl-a kini dari CMEMS Ocean Colour,<br>
 """, unsafe_allow_html=True)
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -494,11 +494,11 @@ with st.sidebar:
             st.markdown("**Status Koneksi API:**")
             # Tampilkan semua kecuali NASA MODIS (selalu False, sudah dinonaktifkan)
             for api_name, ok in st.session_state.api_status.items():
-                icon  = "🟢" if ok else "🔴"
-                label = "Terhubung" if ok else "Gagal"
+                icon  = "🟢" if ok 
+                label = "Terhubung" if ok 
                 # Tampilkan pesan error jika gagal
                 err_msg = st.session_state.api_errors.get(api_name, "")
-                err_hint = f" · <i>{err_msg[:50]}</i>" if (not ok and err_msg) else ""
+                err_hint = f" · <i>{err_msg[:50]}</i>" 
                 st.markdown(
                     f"<span style='font-size:11px;font-family:monospace'>{icon} {api_name} — {label}{err_hint}</span>",
                     unsafe_allow_html=True
