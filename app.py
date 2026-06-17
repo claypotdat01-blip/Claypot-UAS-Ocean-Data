@@ -617,7 +617,12 @@ if mode == "Historis":
 
     # ── NELAYAN ─────────────────────────────────────────────
     if st.session_state.role == "nelayan":
-        mean_fsi = float(df_map["Fisheries_Index"].mean())
+        # Angka FSI untuk status & headline diambil dari skala HISTORIS (df_hist),
+        # sama dengan skala ambang klimatologis (FSI_CLIM_P25/P75). Memakai
+        # df_map (grid dari spatial.py) di sini menyebabkan ketidakcocokan skala
+        # sehingga status meleset (semua WASPADA / semua NORMAL).
+        mean_fsi = float(df_hist["Fisheries_Index"].mean()) if not df_hist.empty \
+                   else float(df["Fisheries_Index"].mean())
         status   = get_fisheries_status(mean_fsi)
         df_rose_src = df_hist if not df_hist.empty else df
         arah_arus,  ikon_arus  = get_arah_arus(df_rose_src)
@@ -984,7 +989,8 @@ elif mode == "Real Time":
     # REAL TIME — NELAYAN
     # =========================================================
     if st.session_state.role == "nelayan":
-        mean_fsi = float(df_map_rt["Fisheries_Index"].mean())
+        # FSI dari df_rt (formula sama dgn historis) → skala cocok dgn ambang klimatologis.
+        mean_fsi = float(df_rt["Fisheries_Index"].mean())
         status   = get_fisheries_status(mean_fsi)
 
         st.markdown(f"""
