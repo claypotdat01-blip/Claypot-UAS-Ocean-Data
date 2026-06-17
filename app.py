@@ -4,7 +4,7 @@ OCEANA — Platform Intelijen Oseanografi Papua
 Real-Time  : CMEMS (arus/SST/salinitas/klorofil-a) · ERA5/Open-Meteo (angin) · BMKG (gelombang)
             Chl-a dari CMEMS bio dataset
 Historis   : rangkuman_historis_20tahun.csv  (fallback: data sintetis)
-Prediksi   : Prediksi (Facebook/Meta)
+Prediksi   : Prophet (Facebook/Meta)
 ============================================================
 """
 
@@ -398,7 +398,7 @@ if st.session_state.page == "home":
   <h1 style="font-family:'Inter',sans-serif;font-size:72px;font-weight:800;color:#FFFFFF;letter-spacing:-0.04em;margin:0 0 6px;line-height:1;">OCEANA</h1>
   <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#7BAFD4;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:24px;">Platform Intelijen Oseanografi Papua</div>
   <div style="color:#A8C0D8;font-size:15px;max-width:560px;margin:0 auto 40px;line-height:1.8;">
-    Data real-time multi-API, klimatologi historis 20 tahun,<br>dan prediksi berbasis Prediksi ML untuk kawasan Laut Arafura.
+    Data real-time multi-API, klimatologi historis 20 tahun,<br>dan proyeksi musiman berbasis model Prophet untuk kawasan Laut Arafura.
   </div>
   <div style="display:flex;justify-content:center;gap:48px;flex-wrap:wrap;">
     <div style="text-align:center;"><div style="font-size:32px;font-weight:800;color:#FFFFFF;">20+</div><div style="font-size:10px;color:#7BAFD4;font-family:'JetBrains Mono',monospace;margin-top:4px;">TAHUN DATA</div></div>
@@ -451,7 +451,7 @@ if st.session_state.page == "home":
   <h3 style="color:#0D1F33;font-size:18px;font-weight:700;margin:0 0 8px;">Akademisi / Peneliti</h3>
   <p style="color:#5A7FA0;font-size:14px;margin:0 0 16px;line-height:1.6;">12 parameter oseanografi, time series 20 tahun, Prediksi, matriks korelasi, dan analisis spasial.</p>
   <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
-    <span style="background:#EBF3FB;color:#1E6BB8;font-size:10px;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;border:1px solid #C0D8EE;">Prediksi Forecast</span>
+    <span style="background:#EBF3FB;color:#1E6BB8;font-size:10px;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;border:1px solid #C0D8EE;">Prophet Forecast</span>
     <span style="background:#EBF3FB;color:#1E6BB8;font-size:10px;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;border:1px solid #C0D8EE;">Korelasi</span>
     <span style="background:#EBF3FB;color:#1E6BB8;font-size:10px;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;border:1px solid #C0D8EE;">Time Series</span>
   </div>
@@ -539,7 +539,8 @@ with st.sidebar:
 · ERA5/Open-Meteo (angin)<br>
 · BMKG/Open-Meteo (gelombang)<br>
 <br>
-<i>Chl-a kini dari CMEMS Ocean Colour,<br>
+<i>Klorofil-a diambil dari CMEMS Ocean Colour.</i>
+</div>
 """, unsafe_allow_html=True)
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -579,7 +580,7 @@ with st.sidebar:
     # ── SIDEBAR: Prediksi ────────────────────────────────────
     else:
         st.markdown("""
-<div class="data-note">🤖 Prediksi menggunakan Prediksi (Meta/Facebook) dilatih pada data historis 2001–2020.</div>
+<div class="data-note">🤖 Proyeksi dibuat dengan model Prophet (Meta) yang dilatih pada data historis 2001–2020.</div>
 """, unsafe_allow_html=True)
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         bulan_pred = st.selectbox("TARGET BULAN PREDIKSI",
@@ -1271,7 +1272,7 @@ elif mode == "Prediksi":
 </div>
 """, unsafe_allow_html=True)
 
-        st.markdown("""<div class="data-note">Model Prediksi dilatih pada 20 tahun data historis (2001–2020).</div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="data-note">Model Prophet dilatih pada 20 tahun data historis (2001–2020).</div>""", unsafe_allow_html=True)
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
         run_pred_nelayan = st.button("▶ Jalankan Prediksi untuk Bulan Ini", use_container_width=False)
@@ -1279,7 +1280,7 @@ elif mode == "Prediksi":
         KEY_LABELS_NELAYAN = ["Fisheries Index","Klorofil-a","Tinggi Gelombang","Kecepatan Arus"]
 
         if run_pred_nelayan:
-            with st.spinner("Melatih model Prediksi..."):
+            with st.spinner("Melatih model Prophet..."):
                 for kp in KEY_PARAMS_NELAYAN:
                     fc, metrics = run_prophet_forecast(df, kp, 12)
                     st.session_state[f"Prediksi_nelayan_{kp}"] = (fc, metrics)
@@ -1337,11 +1338,11 @@ elif mode == "Prediksi":
         st.markdown(f"""
 <div class="page-header">
   <div class="eyebrow">🔬 Akademisi · <span class="mode-badge-pred">🤖 Prediksi</span> &nbsp;· {bulan_pred}</div>
-  <h1>Model Prediksi — {PARAM_LABELS.get(parameter, parameter)}</h1>
+  <h1>Model Prophet — {PARAM_LABELS.get(parameter, parameter)}</h1>
 </div>
 """, unsafe_allow_html=True)
 
-        st.markdown("""<div class="data-note">Model Prediksi (Meta/Facebook) dilatih pada data historis 2001–2020. Prediksi mencakup tren, seasonalitas tahunan, dan interval kepercayaan 80%.</div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="data-note">Model Prophet (Meta) dilatih pada data historis 2001–2020. Proyeksi mencakup komponen tren, musiman tahunan, dan interval kepercayaan 80%.</div>""", unsafe_allow_html=True)
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
         col_ph1, col_ph2 = st.columns([3, 1])
@@ -1352,7 +1353,7 @@ elif mode == "Prediksi":
         Prediksi_key = f"Prediksi_{parameter}_{horizon_months_ui}"
 
         if run_Prediksi:
-            with st.spinner(f"Melatih model Prediksi untuk {PARAM_LABELS.get(parameter, parameter)}..."):
+            with st.spinner(f"Melatih model Prophet untuk {PARAM_LABELS.get(parameter, parameter)}..."):
                 forecast_df, model_metrics = run_prophet_forecast(df, parameter, horizon_months_ui)
                 st.session_state[Prediksi_key] = (forecast_df, model_metrics)
 
