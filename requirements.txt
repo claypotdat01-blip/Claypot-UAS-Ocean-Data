@@ -1,3 +1,4 @@
+"""
 LAUTAN — Data Fetcher
 =====================================================================
 Mengambil data oseanografi real-time dari:
