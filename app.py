@@ -595,17 +595,39 @@ with st.sidebar:
 # =========================================
 # BUILD SPATIAL GRID dari data sumber
 # =========================================
+def _mean_or(df_src, col, default):
+    """Rata-rata kolom bila tersedia & finit, selain itu pakai default."""
+    if df_src is not None and hasattr(df_src, "columns") and col in df_src.columns and len(df_src):
+        v = float(df_src[col].mean())
+        if np.isfinite(v):
+            return v
+    return default
+
 def build_map_from_df(df_src):
-    if df_src is None or (hasattr(df_src, 'empty') and df_src.empty):
-        val_uo = -0.05; val_vo = -0.01
+    empty = df_src is None or (hasattr(df_src, 'empty') and df_src.empty)
+    if empty:
         active_month = datetime.datetime.utcnow().month
         active_year  = datetime.datetime.utcnow().year
     else:
-        val_uo = float(df_src["uo"].mean())
-        val_vo = float(df_src["vo"].mean())
         active_month = int(df_src["month"].mean()) if "month" in df_src.columns else datetime.datetime.utcnow().month
         active_year  = int(df_src["year"].mean())  if "year"  in df_src.columns else datetime.datetime.utcnow().year
-    return build_spatial_grid(val_uo, val_vo, active_month, active_year)
+    # Pusatkan grid spasial pada nilai rata-rata periode -> peta sejajar dengan
+    # headline & status (satu skala), dan peta berubah mengikuti musim.
+    return build_spatial_grid(
+        uo      = _mean_or(df_src, "uo",        -0.05),
+        vo      = _mean_or(df_src, "vo",        -0.01),
+        sst     = _mean_or(df_src, "sst",        28.5),
+        do      = _mean_or(df_src, "do",          6.2),
+        ph      = _mean_or(df_src, "ph",         8.12),
+        chla    = _mean_or(df_src, "chla",       0.22),
+        sal     = _mean_or(df_src, "salinitas",  34.2),
+        wave    = _mean_or(df_src, "gelombang",   0.8),
+        angin_u = _mean_or(df_src, "angin_u",    -1.5),
+        angin_v = _mean_or(df_src, "angin_v",    -0.5),
+        ssta    = _mean_or(df_src, "ssta",        0.0),
+        month_seed = active_month,
+        year_seed  = active_year,
+    )
 
 
 # =========================================
