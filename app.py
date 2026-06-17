@@ -225,43 +225,99 @@ def render_map(df_map, z_col, colorscale, height=520):
 # HELPER: HITUNG ARAH ARUS DOMINAN (DINAMIS)
 # =========================================
 def get_arah_arus(df_src):
+    """
+    Hitung arah dominan arus dari komponen uo (zonal) dan vo (meridional).
+    Menggunakan konvensi oseanografi: arah ke mana arus MENGALIR.
+    Mengembalikan nama arah dalam Bahasa Indonesia beserta ikon kompas.
+    """
     if df_src is None or (hasattr(df_src, "empty") and df_src.empty):
         return "tidak diketahui", "?"
+
     mean_uo = float(df_src["uo"].mean())
     mean_vo = float(df_src["vo"].mean())
+
+    # arctan2(vo, uo) → sudut dari sumbu timur, berlawanan jarum jam
+    # Konversi ke arah mata angin (searah jarum jam dari Utara)
+    # sudut_nav = 90° - sudut_math  →  ke mana arus mengalir dalam derajat geografis
     angle_math = np.degrees(np.arctan2(mean_vo, mean_uo))
-    angle_nav  = (90.0 - angle_math + 360.0) % 360.0
+    angle_nav  = (90.0 - angle_math + 360.0) % 360.0  # 0°=Utara, 90°=Timur, dst.
+
+    # 16 arah mata angin dengan nama & ikon
     arah_list = [
-        ("Utara","↑"),("Utara-Timur Laut","↗"),("Timur Laut","↗"),("Timur-Timur Laut","↗"),
-        ("Timur","→"),("Timur-Tenggara","↘"),("Tenggara","↘"),("Selatan-Tenggara","↘"),
-        ("Selatan","↓"),("Selatan-Barat Daya","↙"),("Barat Daya","↙"),("Barat-Barat Daya","↙"),
-        ("Barat","←"),("Barat-Barat Laut","↖"),("Barat Laut","↖"),("Utara-Barat Laut","↖"),
+        ("Utara",         "↑"),
+        ("Utara-Timur Laut", "↗"),
+        ("Timur Laut",    "↗"),
+        ("Timur-Timur Laut", "↗"),
+        ("Timur",         "→"),
+        ("Timur-Tenggara","↘"),
+        ("Tenggara",      "↘"),
+        ("Selatan-Tenggara", "↘"),
+        ("Selatan",       "↓"),
+        ("Selatan-Barat Daya", "↙"),
+        ("Barat Daya",    "↙"),
+        ("Barat-Barat Daya", "↙"),
+        ("Barat",         "←"),
+        ("Barat-Barat Laut", "↖"),
+        ("Barat Laut",    "↖"),
+        ("Utara-Barat Laut", "↖"),
     ]
+
     idx = int((angle_nav + 11.25) / 22.5) % 16
-    return arah_list[idx]
+    nama, ikon = arah_list[idx]
+    return nama, ikon
+
 
 def get_arah_angin(df_src):
+    """
+    Hitung arah dominan angin dari komponen angin_u dan angin_v.
+    Konvensi meteorologi: angin DARI arah mana bertiup (bukan ke mana pergi).
+    """
     if df_src is None or (hasattr(df_src, "empty") and df_src.empty):
         return "tidak diketahui", "?"
+
     mean_u = float(df_src["angin_u"].mean())
     mean_v = float(df_src["angin_v"].mean())
+
+    # Arah dari mana angin datang: balik vektor (−u, −v)
     angle_math = np.degrees(np.arctan2(-mean_v, -mean_u))
     angle_nav  = (90.0 - angle_math + 360.0) % 360.0
+
     arah_list = [
-        ("Utara","↓"),("Utara-Timur Laut","↙"),("Timur Laut","↙"),("Timur-Timur Laut","↙"),
-        ("Timur","←"),("Timur-Tenggara","↖"),("Tenggara","↖"),("Selatan-Tenggara","↖"),
-        ("Selatan","↑"),("Selatan-Barat Daya","↗"),("Barat Daya","↗"),("Barat-Barat Daya","↗"),
-        ("Barat","→"),("Barat-Barat Laut","↘"),("Barat Laut","↘"),("Utara-Barat Laut","↘"),
+        ("Utara",         "↓"),   # angin dari utara bertiup ke selatan
+        ("Utara-Timur Laut", "↙"),
+        ("Timur Laut",    "↙"),
+        ("Timur-Timur Laut", "↙"),
+        ("Timur",         "←"),
+        ("Timur-Tenggara","↖"),
+        ("Tenggara",      "↖"),
+        ("Selatan-Tenggara", "↖"),
+        ("Selatan",       "↑"),
+        ("Selatan-Barat Daya", "↗"),
+        ("Barat Daya",    "↗"),
+        ("Barat-Barat Daya", "↗"),
+        ("Barat",         "→"),
+        ("Barat-Barat Laut", "↘"),
+        ("Barat Laut",    "↘"),
+        ("Utara-Barat Laut", "↘"),
     ]
+
     idx = int((angle_nav + 11.25) / 22.5) % 16
-    return arah_list[idx]
+    nama, ikon = arah_list[idx]
+    return nama, ikon
+
 
 def format_rekomendasi_normal(df_src, label_periode=""):
+    """
+    Buat teks rekomendasi dinamis untuk kondisi NORMAL
+    berdasarkan arah arus dan angin aktual dari data.
+    """
     nama_arus, ikon_arus = get_arah_arus(df_src)
     nama_angin, ikon_angin = get_arah_angin(df_src)
+
     kec_arus = float(df_src["current_speed"].mean()) if "current_speed" in df_src.columns else 0.0
     kec_angin = float(np.sqrt(df_src["angin_u"]**2 + df_src["angin_v"]**2).mean()) \
         if "angin_u" in df_src.columns else 0.0
+
     teks = (
         f"**Kondisi normal{' — ' + label_periode if label_periode else ''}.** "
         f"Ikan bergerak mengikuti arus yang dominan ke arah **{nama_arus}** {ikon_arus} "
@@ -271,6 +327,7 @@ def format_rekomendasi_normal(df_src, label_periode=""):
         f"sesuaikan posisi perahu agar tidak melawan arus."
     )
     return teks
+
 
 # =========================================
 # ROSE DIAGRAM HELPERS
@@ -465,6 +522,7 @@ with st.sidebar:
 
     mode = st.selectbox("MODE DATA", ["Historis", "Real Time", "Prediksi"])
 
+    # ── Reset prophet cache saat ganti mode ──────────────────
     if st.session_state.prev_mode != mode:
         keys_to_del = [k for k in st.session_state.keys() if k.startswith("prophet_")]
         for k in keys_to_del:
@@ -473,6 +531,7 @@ with st.sidebar:
 
     st.markdown("---")
 
+    # ── SIDEBAR: Historis ────────────────────────────────────
     if mode == "Historis":
         st.markdown("""<div class="data-note">📂 Data klimatologi 2001–2020 dari rangkuman_historis_20tahun.csv</div>""", unsafe_allow_html=True)
         tahun = st.selectbox("TAHUN", sorted(df["year"].unique(), reverse=True))
@@ -494,6 +553,7 @@ with st.sidebar:
             df_hist = df_hist[df_hist["month"].isin(musim_map_dict[musim_pilih])]
             waktu_label = f"{musim_pilih} {tahun}"
 
+    # ── SIDEBAR: Real Time ───────────────────────────────────
     elif mode == "Real Time":
         st.markdown("""
 <div class="data-note">🛰 Data langsung dari:<br>· CMEMS (arus, SST, salinitas)<br>· NASA MODIS (klorofil-a)<br>· ERA5/ECMWF (angin)<br>· BMKG (gelombang)</div>
@@ -532,6 +592,7 @@ with st.sidebar:
 </div>
 """, unsafe_allow_html=True)
 
+    # ── SIDEBAR: Prediksi ────────────────────────────────────
     else:
         st.markdown("""
 <div class="data-note">🤖 Prediksi menggunakan Prophet (Meta/Facebook) dilatih pada data historis 2001–2020.</div>
@@ -591,6 +652,7 @@ if mode == "Historis":
         mean_fsi = float(df_map["Fisheries_Index"].mean())
         status   = get_fisheries_status(mean_fsi, df_map)
 
+        # Hitung arah arus & angin dari data historis yang sedang ditampilkan
         df_rose_src = df_hist if not df_hist.empty else df
         arah_arus,  ikon_arus  = get_arah_arus(df_rose_src)
         arah_angin, ikon_angin = get_arah_angin(df_rose_src)
@@ -699,19 +761,13 @@ if mode == "Historis":
 </div>
 """, unsafe_allow_html=True)
 
-        # ── FIX: Metrics dari data CSV asli, bukan df_map sintetis ──
         df_ts_stat = df.groupby("time")[parameter].mean().reset_index()
-        vals_stat  = df_ts_stat[parameter]
-        col1, col2, col3, col4 = st.columns(4)
+        vals_stat   = df_ts_stat[parameter]
+        col1,col2,col3,col4 = st.columns(4)
         col1.metric("Rata-Rata", f"{vals_stat.mean():.4f}")
         col2.metric("Minimum",   f"{vals_stat.min():.4f}")
         col3.metric("Maksimum",  f"{vals_stat.max():.4f}")
         col4.metric("Std. Dev",  f"{vals_stat.std():.4f}")
-        # ────────────────────────────────────────────────────────────
-
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        st.markdown(f"""<span class="source-pill">📂 Sumber: Data Historis 2001–2020</span><span class="source-pill">📅 Periode: {waktu_label}</span>""", unsafe_allow_html=True)
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
         PARAM_TERARAH = ["angin_u","angin_v","gelombang"]
         tampilkan_rose = parameter in PARAM_TERARAH
@@ -730,19 +786,17 @@ if mode == "Historis":
             st.plotly_chart(render_map(df_map, parameter, cmap, height=500), use_container_width=True)
             st.markdown(f"""<span class="coord-tag">4°S – 12°S</span><span class="coord-tag">129°E – 144°E</span><span class="coord-tag">Grid 100×80 · Laut Arafura</span>""", unsafe_allow_html=True)
 
-        # ── FIX: Time Series ─────────────────────────────────
-        with tabs[1]:
+                with tabs[1]:
             df_ts = df.groupby("time")[parameter].mean().reset_index()
             y_vals = df_ts[parameter].to_numpy(dtype=float)
         
             if len(y_vals) >= 2:
                 z = np.polyfit(range(len(df_ts)), y_vals, 1)
                 y_trend = np.poly1d(z)(range(len(df_ts)))
-                slope_label = f"Tren {'↑' if z[0] > 0 else '↓'} {abs(z[0] * 12):.5f}/tahun"
+                slope_label = f"Tren {'↑' if z[0] > 0 else '↓'} {abs(z[0]*12):.5f}/tahun"
             else:
                 y_trend = y_vals.copy()
                 slope_label = "Tren"
-                z = [0, 0]
         
             y_lo = float(min(y_vals.min(), y_trend.min()))
             y_hi = float(max(y_vals.max(), y_trend.max()))
@@ -764,87 +818,26 @@ if mode == "Historis":
                     mode="lines", name=slope_label,
                     line=dict(color="#D4811A", width=2, dash="dot"),
                 ))
+        
+            # highlight periode yang dipilih
             if not df_hist.empty:
                 df_highlight = df_ts[df_ts["time"].isin(df_hist["time"])]
                 if not df_highlight.empty:
                     fig_ts.add_trace(go.Scatter(
                         x=df_highlight["time"],
-                        y=df_highlight[parameter].to_numpy(dtype=float),
+                        y=df_highlight[parameter].values,
                         mode="markers",
                         name=f"Periode: {waktu_label}",
                         marker=dict(color="#E85A0C", size=8,
                                     line=dict(color="#FFFFFF", width=1.5)),
                     ))
         
-            # Buat xaxis baru dengan merge manual — tidak double-key dengan PLOTLY_LAYOUT
-            xaxis_ts = {**PLOTLY_LAYOUT["xaxis"],
-                "rangeslider": dict(visible=True, thickness=0.06),
-                "rangeselector": dict(
-                    buttons=[
-                        dict(count=2,  label="2T",  step="year", stepmode="backward"),
-                        dict(count=5,  label="5T",  step="year", stepmode="backward"),
-                        dict(count=10, label="10T", step="year", stepmode="backward"),
-                        dict(step="all", label="Semua"),
-                    ],
-                    bgcolor="#EBF3FB", activecolor="#1E6BB8",
-                    font=dict(size=11, color="#0D1F33"),
-                ),
-            }
-        
-            # Unpack PLOTLY_LAYOUT tapi exclude xaxis, lalu pasang xaxis_ts sendiri
-            layout_base = {k: v for k, v in PLOTLY_LAYOUT.items() if k != "xaxis"}
             fig_ts.update_layout(
-                **layout_base,
-                xaxis=xaxis_ts,
+                **PLOTLY_LAYOUT,
                 title=f"Tren Temporal 2001–2020 · {PARAM_LABELS_CLEAN.get(parameter, parameter)}",
                 legend=dict(font=dict(color="#3A5070", size=11),
                             bgcolor="rgba(255,255,255,0.9)",
                             bordercolor="#D6E4F0", borderwidth=1),
-                height=420,
-                hovermode="x unified",
-            )
-            fig_ts.update_yaxes(range=[y_lo - pad, y_hi + pad], autorange=False)
-            st.plotly_chart(fig_ts, use_container_width=True)
-            st.caption(
-                f"Sumber: Data historis CSV 2001–2020 · {len(df_ts)} titik data bulanan"
-                + (f" · Tren: {z[0] * 12:+.5f}/tahun" if len(y_vals) >= 2 else "")
-            )
-
-            # Tren linear
-            if len(y_vals) >= 2:
-                fig_ts.add_trace(go.Scatter(
-                    x=df_ts["time"],
-                    y=y_trend,
-                    mode="lines",
-                    name=slope_label,
-                    line=dict(color="#D4811A", width=2, dash="dot"),
-                ))
-
-            # Highlight titik periode yang dipilih di sidebar
-            if not df_hist.empty:
-                df_highlight = df_ts[df_ts["time"].isin(df_hist["time"])]
-                if not df_highlight.empty:
-                    fig_ts.add_trace(go.Scatter(
-                        x=df_highlight["time"],
-                        y=df_highlight[parameter].to_numpy(dtype=float),
-                        mode="markers",
-                        name=f"Periode: {waktu_label}",
-                        marker=dict(
-                            color="#E85A0C",
-                            size=8,
-                            line=dict(color="#FFFFFF", width=1.5),
-                        ),
-                    ))
-
-            fig_ts.update_layout(
-                **PLOTLY_LAYOUT,
-                title=f"Tren Temporal 2001–2020 · {PARAM_LABELS_CLEAN.get(parameter, parameter)}",
-                legend=dict(
-                    font=dict(color="#3A5070", size=11),
-                    bgcolor="rgba(255,255,255,0.9)",
-                    bordercolor="#D6E4F0",
-                    borderwidth=1,
-                ),
                 height=420,
                 hovermode="x unified",
                 xaxis=dict(
@@ -857,8 +850,7 @@ if mode == "Historis":
                             dict(count=10, label="10T", step="year", stepmode="backward"),
                             dict(step="all", label="Semua"),
                         ],
-                        bgcolor="#EBF3FB",
-                        activecolor="#1E6BB8",
+                        bgcolor="#EBF3FB", activecolor="#1E6BB8",
                         font=dict(size=11, color="#0D1F33"),
                     ),
                 ),
@@ -867,9 +859,8 @@ if mode == "Historis":
             st.plotly_chart(fig_ts, use_container_width=True)
             st.caption(
                 f"Sumber: Data historis CSV 2001–2020 · {len(df_ts)} titik data bulanan"
-                + (f" · Tren: {z[0] * 12:+.5f}/tahun" if len(y_vals) >= 2 else "")
+                + (f" · Tren: {z[0]*12:+.5f}/tahun" if len(y_vals) >= 2 else "")
             )
-        # ─────────────────────────────────────────────────────
 
         with tabs[2]:
             desc = df_map[[parameter]].describe()
@@ -998,9 +989,11 @@ elif mode == "Real Time":
 
     df_map_rt = build_map_from_df(df_rt)
 
+    # Hitung arah arus & angin dari data real-time (atau fallback klimatologis)
     arah_arus_rt,  ikon_arus_rt  = get_arah_arus(df_rt)
     arah_angin_rt, ikon_angin_rt = get_arah_angin(df_rt)
 
+    # ── NELAYAN · REAL TIME ──────────────────────────────────
     if st.session_state.role == "nelayan":
         mean_fsi = float(df_map_rt["Fisheries_Index"].mean())
         status   = get_fisheries_status(mean_fsi, df_map_rt)
@@ -1111,6 +1104,7 @@ elif mode == "Real Time":
                 st.markdown('<div class="section-label">SST TERKINI</div>', unsafe_allow_html=True)
                 st.plotly_chart(render_map(df_map_rt, "sst", "Plasma", height=300), use_container_width=True)
 
+    # ── AKADEMISI · REAL TIME ────────────────────────────────
     else:
         st.markdown(f"""
 <div class="page-header">
@@ -1218,6 +1212,7 @@ elif mode == "Real Time":
 elif mode == "Prediksi":
 
     if st.session_state.role == "nelayan":
+        # ── NELAYAN · PREDIKSI ───────────────────────────────
         st.markdown(f"""
 <div class="page-header">
   <div class="eyebrow">🎣 Nelayan · <span class="mode-badge-pred">🤖 PREDIKSI PROPHET</span> &nbsp;· {bulan_pred}</div>
@@ -1259,6 +1254,7 @@ elif mode == "Prediksi":
                         f"± {(hi_val - lo_val)/2:.3f}"
                     )
 
+            # Plot FSI forecast
             fc_fsi, _ = st.session_state["prophet_nelayan_Fisheries_Index"]
             future_only = fc_fsi[fc_fsi["ds"] > df["time"].max()]
             fig_fsi_pred = go.Figure()
@@ -1280,6 +1276,8 @@ elif mode == "Prediksi":
                 height=380)
             st.plotly_chart(fig_fsi_pred, use_container_width=True)
 
+            # Rekomendasi berdasarkan nilai prediksi FSI
+            # Gunakan data historis bulan yang diprediksi sebagai proxy arah arus
             df_bulan_pred = df[df["month"] == month_idx_pred]
             arah_arus_pred,  ikon_arus_pred  = get_arah_arus(df_bulan_pred)
             arah_angin_pred, ikon_angin_pred = get_arah_angin(df_bulan_pred)
@@ -1314,6 +1312,7 @@ elif mode == "Prediksi":
             st.info("Klik **▶ Jalankan Prediksi** untuk melihat proyeksi kondisi laut.")
 
     else:
+        # ── AKADEMISI · PREDIKSI ─────────────────────────────
         st.markdown(f"""
 <div class="page-header">
   <div class="eyebrow">🔬 Akademisi · <span class="mode-badge-pred">🤖 PREDIKSI PROPHET</span> &nbsp;· {bulan_pred}</div>
