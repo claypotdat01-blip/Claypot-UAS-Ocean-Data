@@ -426,12 +426,10 @@ with st.sidebar:
             ts_scope_label = musim_pilih
 
     elif mode == "Real Time":
-        # ── Tombol manual refresh ──────────────────────────
         if st.button("🔄 Ambil Data Sekarang", use_container_width=True, key="btn_fetch_rt"):
             st.session_state.pop("rt_data", None)
 
         if _HAS_FETCHER:
-            # Fetch hanya jika belum ada di session state
             if "rt_data" not in st.session_state:
                 with st.spinner("Menghubungi API..."):
                     rt_result = build_realtime_dataframe(
@@ -447,7 +445,6 @@ with st.sidebar:
             now_month = int(df_rt["month"].iloc[0])
             now_year  = int(df_rt["year"].iloc[0])
 
-            # Pastikan kolom turunan ada
             if "current_speed" not in df_rt.columns:
                 df_rt["current_speed"] = np.sqrt(df_rt["uo"]**2 + df_rt["vo"]**2)
 
@@ -471,7 +468,6 @@ with st.sidebar:
             df_filter_base = df_rt
 
         else:
-            # Fallback silent jika data_fetcher tidak tersedia
             now_month      = datetime.datetime.now().month
             now_year       = datetime.datetime.now().year
             df_filter_base = df[df["month"] == now_month].copy()
@@ -864,6 +860,7 @@ if st.session_state.role == "nelayan":
 </div>
 """, unsafe_allow_html=True)
 
+    # ── Baris 1: Status + Metrics ──────────────────────────────────────────
     col_s1, col_s2, col_s3, col_s4 = st.columns([2, 1, 1, 1])
     with col_s1:
         st.markdown(f"""
@@ -883,24 +880,21 @@ if st.session_state.role == "nelayan":
     with col_s4:
         st.metric("Kec. Arus", f"{df_map['current_speed'].mean():.3f}", "m/s")
 
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="section-label">PETA DISTRIBUSI SPASIAL · FISHERIES INDEX</div>', unsafe_allow_html=True)
-    if not df_map.empty:
-        st.plotly_chart(render_map(df_map, "Fisheries_Index", "Turbo"), use_container_width=True)
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    # ── Baris 2: Peta (kiri) + Rekomendasi & Kondisi (kanan) ──────────────
+    col_map, col_info = st.columns([3, 2], gap="medium")
 
-    st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG</div>', unsafe_allow_html=True)
-    rc1, rc2 = st.columns(2)
-    df_rose_src = df_filter_base if not df_filter_base.empty else df
-    with rc1:
-        st.plotly_chart(make_wind_rose(df_rose_src, f"Arah & Kecepatan Angin · {waktu_label}"), use_container_width=True)
-    with rc2:
-        st.plotly_chart(make_wave_rose(df_rose_src, f"Arah & Tinggi Gelombang · {waktu_label}"), use_container_width=True)
+    with col_map:
+        st.markdown('<div class="section-label">PETA DISTRIBUSI SPASIAL · FISHERIES INDEX</div>', unsafe_allow_html=True)
+        if not df_map.empty:
+            st.plotly_chart(
+                render_map(df_map, "Fisheries_Index", "Turbo", height=460),
+                use_container_width=True
+            )
 
-    col_r1, col_r2 = st.columns(2)
-
-    with col_r1:
+    with col_info:
+        # ── Rekomendasi Zona Melaut ──
         st.markdown('<div class="section-label">REKOMENDASI ZONA MELAUT</div>', unsafe_allow_html=True)
 
         df_rec_src = df_filter_base if not df_filter_base.empty else df
@@ -957,13 +951,15 @@ if st.session_state.role == "nelayan":
 
         st.markdown(f"""
 <div class="data-note">
-  🧭 Arus dominan menuju: <b>{dir_arus}</b> ({deg_arus:.0f}°) · {spd_arus:.4f} m/s &nbsp;|&nbsp;
-  💨 Angin dari: <b>{dir_angin}</b> ({deg_angin:.0f}°) · {spd_angin:.2f} m/s &nbsp;|&nbsp;
-  🌊 Gelombang menuju: <b>{dir_gelombang}</b> ({deg_gelombang:.0f}°) · {wave_mean:.2f} m
+  🧭 Arus: <b>{dir_arus}</b> ({deg_arus:.0f}°) · {spd_arus:.4f} m/s &nbsp;|&nbsp;
+  💨 Angin dari: <b>{dir_angin}</b> ({deg_angin:.0f}°)<br>
+  🌊 Gelombang: <b>{dir_gelombang}</b> ({deg_gelombang:.0f}°) · {wave_mean:.2f} m
 </div>
 """, unsafe_allow_html=True)
 
-    with col_r2:
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+        # ── Kondisi Perairan ──
         st.markdown('<div class="section-label">KONDISI PERAIRAN SAAT INI</div>', unsafe_allow_html=True)
         chla_mean = df_map["chla"].mean()
         do_mean   = df_map["do"].mean()
@@ -981,6 +977,23 @@ if st.session_state.role == "nelayan":
   </div>
 </div>
 """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+
+    # ── Baris 3: Rose Diagram Angin (kiri) + Rose Diagram Gelombang (kanan) ──
+    st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG</div>', unsafe_allow_html=True)
+    rc1, rc2 = st.columns(2)
+    df_rose_src = df_filter_base if not df_filter_base.empty else df
+    with rc1:
+        st.plotly_chart(
+            make_wind_rose(df_rose_src, f"Arah & Kecepatan Angin · {waktu_label}"),
+            use_container_width=True
+        )
+    with rc2:
+        st.plotly_chart(
+            make_wave_rose(df_rose_src, f"Arah & Tinggi Gelombang · {waktu_label}"),
+            use_container_width=True
+        )
 
 # =========================================
 # DASHBOARD — AKADEMISI
