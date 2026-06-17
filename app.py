@@ -496,13 +496,6 @@ with st.sidebar:
             for api_name, ok in st.session_state.api_status.items():
                 icon  = "🟢" 
                 label = "Terhubung" 
-                # Tampilkan pesan error jika gagal
-                err_msg = st.session_state.api_errors.get(api_name, "")
-                err_hint = f" · <i>{err_msg[:50]}</i>" 
-                st.markdown(
-                    f"<span style='font-size:11px;font-family:monospace'>{icon} {api_name} — {label}{err_hint}</span>",
-                    unsafe_allow_html=True
-                )
 
         if st.session_state.last_update:
             wib = st.session_state.last_update + datetime.timedelta(hours=7)
