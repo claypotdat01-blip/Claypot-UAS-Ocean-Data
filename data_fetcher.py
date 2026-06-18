@@ -529,14 +529,11 @@ def build_realtime_dataframe(cmems_user: str, cmems_pass: str,
 
     status = {
         "CMEMS":           False,
-        "NASA MODIS":      False,   # selalu False — dinonaktifkan
         "ERA5/Open-Meteo": False,
         "BMKG":            False,
     }
-    errors = {
-        "NASA MODIS": "Dinonaktifkan — Chl-a diambil dari CMEMS bio dataset.",
-    }
-    any_ok = False
+    errors  = {}
+    any_ok  = False
 
     # ── 1. CMEMS ─────────────────────────────────────────────────────────
     print("\n[LAUTAN] ── CMEMS...")
@@ -552,9 +549,6 @@ def build_realtime_dataframe(cmems_user: str, cmems_pass: str,
     else:
         errors["CMEMS"] = r.get("error", "unknown")
         print(f"[LAUTAN] ✗ CMEMS: {errors['CMEMS'][:80]}")
-
-    # ── 2. NASA MODIS — DILEWATI ─────────────────────────────────────────
-    print("[LAUTAN] ── NASA MODIS: dilewati (Chl-a dari CMEMS)")
 
     # ── 3. ERA5 / Open-Meteo ─────────────────────────────────────────────
     print("[LAUTAN] ── ERA5/Open-Meteo...")
@@ -622,4 +616,3 @@ def build_realtime_dataframe(cmems_user: str, cmems_pass: str,
         "status": status,
         "errors": errors,
     }
-
