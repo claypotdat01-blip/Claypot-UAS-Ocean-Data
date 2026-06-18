@@ -1073,9 +1073,8 @@ elif mode == "Real Time":
                 detail_parts = []
                 for api_name, ok in api_status.items():
                     if api_name in SKIP_APIS:  # ← baris baru
-                        continue                # ← baris baru
-                    icon = "✓" if ok else "✗"
-                    err = api_errors.get(api_name, "")
+                        continue                # ← baris baru                        icon = "✓" if ok else "✗"
+                     err = api_errors.get(api_name, "")
                     hint = f" ({err[:40]})" if (not ok and err) else ""
                     detail_parts.append(f"{icon} {api_name}{hint}")
                 detail = " &nbsp;|&nbsp; ".join(detail_parts)
