@@ -15,11 +15,16 @@ except Exception:
 
 
 def normalisasi_global(series, vmin, vmax):
-    """Min-max normalization ke rentang [0, 1]."""
     rng = vmax - vmin
+
     if rng == 0:
         return series * 0 if hasattr(series, "__len__") else 0.0
-    return (series - vmin) / rng
+
+    return np.clip(
+        (series - vmin) / rng,
+        0.0,
+        1.0
+    )
 
 
 def suitabilitas_optimal(x, lo, opt_lo, opt_hi, hi):
@@ -128,7 +133,7 @@ def build_spatial_grid(uo: float = -0.05, vo: float = -0.01,
         0.15 * suitabilitas_optimal(grid_sal, 32.0, 33.5, 35.0, 36.5) +
         0.10 * suitabilitas_optimal(grid_sst, 22.0, 26.0, 30.0, 32.0)
     ) * 100
-
+    grid_sohi = np.clip(grid_sohi, 0, 100)
     grid_fsi = (
         0.35 * normalisasi_global(grid_chla, 0.05, 0.8) +
         0.25 * suitabilitas_optimal(grid_sst, 24.0, 28.0, 30.0, 33.0) +
@@ -136,7 +141,7 @@ def build_spatial_grid(uo: float = -0.05, vo: float = -0.01,
         0.10 * normalisasi_global(grid_speed, 0.0, 0.25) +
         0.10 * (1 - normalisasi_global(grid_wave, 0.2, 2.5))
     ) * 100
-
+    grid_fsi = np.clip(grid_fsi, 0, 100)
     grid_angin_u = angin_u + vs * 0.25
     grid_angin_v = angin_v + vs * 0.12
 
