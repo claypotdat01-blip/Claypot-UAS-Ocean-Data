@@ -28,315 +28,69 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ============================================================
-# STYLE
-# ============================================================
-
+# =========================================
+# DESIGN SYSTEM
+# =========================================
 STYLE = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
-
-html, body, [class*="css"] {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-}
-
-/* ── Background utama ── */
-.stApp {
-    background: #F7F9FC;
-    color: #0C1F35;
-}
-
-/* ── Sidebar: biru laut solid, kontras tinggi ── */
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0055A4 0%, #003D7A 100%) !important;
-    border-right: none !important;
-}
-[data-testid="stSidebar"] * {
-    color: #DBEEFF !important;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+.stApp { background: #F2F6FA; color: #0D1F33; }
+[data-testid="stSidebar"] { background: #0D1F33 !important; border-right: 1px solid #1A3A5C !important; }
+[data-testid="stSidebar"] * { color: #CBD8E8 !important; }
 [data-testid="stSidebar"] .stSelectbox label,
 [data-testid="stSidebar"] .stRadio label {
-    color: #90C4FF !important;
-    font-size: 10px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.10em;
-    font-family: 'JetBrains Mono', monospace !important;
+    color: #7BAFD4 !important; font-size: 10px !important;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    font-family: 'JetBrains Mono', monospace !important; font-weight: 500 !important;
 }
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-    color: #90C4FF !important;
-    font-size: 12px !important;
-}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #7BAFD4 !important; font-size: 12px !important; }
 [data-testid="stSidebar"] .stSelectbox > div > div {
-    background: rgba(255,255,255,0.12) !important;
-    border: 1px solid rgba(255,255,255,0.28) !important;
-    color: #FFFFFF !important;
-    border-radius: 8px !important;
+    background: #162A42 !important; border: 1px solid #2A4A6A !important;
+    color: #CBD8E8 !important; border-radius: 6px !important;
 }
-[data-testid="stSidebar"] .stRadio > div > label {
-    color: #DBEEFF !important;
-}
-
-/* ── Tombol utama: oranye hangat ── */
 .stButton > button {
-    background: #FF7A1A !important;
-    border: none !important;
-    color: #FFFFFF !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    border-radius: 8px !important;
-    padding: 10px 20px !important;
-    letter-spacing: 0.01em !important;
-    transition: background 0.18s, transform 0.12s !important;
-    box-shadow: 0 2px 8px rgba(255,122,26,0.30) !important;
+    background: #1E6BB8 !important; border: none !important; color: #FFFFFF !important;
+    font-family: 'Inter', sans-serif !important; font-size: 13px !important;
+    font-weight: 600 !important; border-radius: 6px !important;
+    transition: background 0.2s ease !important; padding: 10px 20px !important;
+    letter-spacing: 0.02em !important;
 }
-.stButton > button:hover {
-    background: #E66000 !important;
-    transform: translateY(-1px) !important;
-}
-.stButton > button:active {
-    transform: translateY(0) !important;
-}
-
-/* Tombol sidebar: transparan putih */
-[data-testid="stSidebar"] .stButton > button {
-    background: rgba(255,255,255,0.15) !important;
-    border: 1.5px solid rgba(255,255,255,0.40) !important;
-    color: #FFFFFF !important;
-    font-weight: 600 !important;
-    box-shadow: none !important;
-}
-[data-testid="stSidebar"] .stButton > button:hover {
-    background: rgba(255,255,255,0.28) !important;
-    transform: none !important;
-}
-
-/* ── Metric cards ── */
-[data-testid="stMetric"] {
-    background: #FFFFFF;
-    border: 1.5px solid #DBE8F6;
-    border-top: 3px solid #0055A4;
-    border-radius: 10px;
-    padding: 16px 20px !important;
-}
-[data-testid="stMetricLabel"] {
-    color: #3A6A94 !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-family: 'JetBrains Mono', monospace !important;
-}
-[data-testid="stMetricValue"] {
-    color: #0C1F35 !important;
-    font-size: 26px !important;
-    font-weight: 800 !important;
-}
-
-/* ── Tabs ── */
-.stTabs [data-baseweb="tab-list"] {
-    background: #FFFFFF !important;
-    border-bottom: 2px solid #DBE8F6 !important;
-    border-radius: 10px 10px 0 0 !important;
-    gap: 0;
-    padding: 0 16px;
-}
-.stTabs [data-baseweb="tab"] {
-    background: transparent !important;
-    border: none !important;
-    color: #3A6A94 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    padding: 12px 18px !important;
-}
-.stTabs [aria-selected="true"] {
-    color: #0055A4 !important;
-    border-bottom: 3px solid #FF7A1A !important;
-    font-weight: 700 !important;
-}
-
-/* ── Alert boxes – teks gelap, kontras tinggi ── */
-.stSuccess {
-    background: #EDFAF3 !important;
-    border-left: 4px solid #00895A !important;
-    border-radius: 8px !important;
-    color: #004D32 !important;
-}
-.stInfo {
-    background: #E6F1FF !important;
-    border-left: 4px solid #0055A4 !important;
-    border-radius: 8px !important;
-    color: #003272 !important;
-}
-.stWarning {
-    background: #FFF4E5 !important;
-    border-left: 4px solid #FF7A1A !important;
-    border-radius: 8px !important;
-    color: #7A3800 !important;
-}
-
-hr { border-color: #DBE8F6 !important; }
-
-/* ── Page header ── */
-.page-header {
-    background: #FFFFFF;
-    border-radius: 12px;
-    border-left: 5px solid #FF7A1A;
-    padding: 20px 24px 16px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 12px rgba(0,85,164,0.07);
-}
-.page-header .eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: #0055A4;
-    text-transform: uppercase;
-    letter-spacing: 0.16em;
-    margin-bottom: 6px;
-    font-weight: 700;
-}
-.page-header h1 {
-    font-size: 24px;
-    font-weight: 800;
-    color: #0C1F35;
-    margin: 0;
-    letter-spacing: -0.02em;
-}
-
-/* ── Section label ── */
-.section-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: #0055A4;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    margin-bottom: 10px;
-    font-weight: 700;
-}
-
-/* ── Koordinat tag ── */
-.coord-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: #0C3D75;
-    background: #E6F1FF;
-    padding: 3px 10px;
-    border-radius: 20px;
-    border: 1px solid #B8D5F8;
-    display: inline-block;
-    margin: 2px;
-    font-weight: 600;
-}
-
-/* ── Data note ── */
-.data-note {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: #1A4A7A;
-    background: #E6F1FF;
-    border-left: 3px solid #0055A4;
-    padding: 8px 12px;
-    border-radius: 0 6px 6px 0;
-    margin-top: 8px;
-    font-weight: 500;
-    line-height: 1.6;
-}
-.data-note-warn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: #7A3800;
-    background: #FFF4E5;
-    border-left: 3px solid #FF7A1A;
-    padding: 8px 12px;
-    border-radius: 0 6px 6px 0;
-    margin-top: 8px;
-    font-weight: 500;
-    line-height: 1.6;
-}
-
-/* ── Real-time live badge ── */
-.update-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #003D7A;
-    border: 1.5px solid #4DD68A;
-    border-radius: 20px;
-    padding: 4px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: #4DD68A;
-    letter-spacing: 0.08em;
-    font-weight: 700;
-}
-.pulse {
-    width: 7px;
-    height: 7px;
-    background: #4DD68A;
-    border-radius: 50%;
-    animation: pulse 1.5s infinite;
-    display: inline-block;
-}
-@keyframes pulse {
-    0%,100% { opacity:1; transform:scale(1); }
-    50%      { opacity:.4; transform:scale(1.35); }
-}
-
-/* ── Mode badges ── */
-.mode-badge-hist {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: #E6F1FF;
-    border: 1.5px solid #B8D5F8;
-    border-radius: 20px; padding: 3px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; color: #0C3D75;
-    letter-spacing: 0.08em; font-weight: 700;
-}
-.mode-badge-pred {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: #FFF4E5;
-    border: 1.5px solid #FFD0A0;
-    border-radius: 20px; padding: 3px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; color: #7A3800;
-    letter-spacing: 0.08em; font-weight: 700;
-}
-
-/* ── Source pill ── */
-.source-pill {
-    display: inline-block;
-    background: #0055A4;
-    border-radius: 20px;
-    padding: 3px 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
-    color: #E6F1FF;
-    letter-spacing: 0.08em;
-    margin: 2px;
-    font-weight: 600;
-}
-
-/* ── RT empty box ── */
-.rt-empty-box {
-    background: #FFFFFF;
-    border: 2px dashed #B8D5F8;
-    border-radius: 14px;
-    padding: 56px 32px;
-    text-align: center;
-}
+.stButton > button:hover { background: #1558A0 !important; }
+[data-testid="stMetric"] { background: #FFFFFF; border: 1px solid #D6E4F0; border-radius: 8px; padding: 16px 20px !important; }
+[data-testid="stMetricLabel"] { color: #5A7FA0 !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace !important; }
+[data-testid="stMetricValue"] { color: #0D1F33 !important; font-size: 24px !important; font-weight: 700 !important; }
+.stTabs [data-baseweb="tab-list"] { background: #FFFFFF !important; border-bottom: 1px solid #D6E4F0 !important; border-radius: 8px 8px 0 0 !important; gap: 0; padding: 0 12px; }
+.stTabs [data-baseweb="tab"] { background: transparent !important; border: none !important; color: #5A7FA0 !important; font-family: 'Inter', sans-serif !important; font-size: 13px !important; font-weight: 500 !important; padding: 12px 18px !important; }
+.stTabs [aria-selected="true"] { color: #1E6BB8 !important; border-bottom: 2px solid #1E6BB8 !important; font-weight: 600 !important; }
+hr { border-color: #D6E4F0 !important; }
+[data-testid="stSidebar"] .stButton > button { background: #FFFFFF !important; color: #0D1F33 !important; border: 1px solid #7BAFD4 !important; font-weight: 600 !important; }
+[data-testid="stSidebar"] .stButton > button:hover { background: #E8F2FB !important; }
+.page-header { border-bottom: 2px solid #1E6BB8; padding-bottom: 12px; margin-bottom: 24px; }
+.page-header .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #1E6BB8; text-transform: uppercase; letter-spacing: 0.16em; margin-bottom: 6px; }
+.page-header h1 { font-size: 26px; font-weight: 700; color: #0D1F33; margin: 0; letter-spacing: -0.02em; }
+.section-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #1E6BB8; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px; font-weight: 500; }
+.coord-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3A6080; background: #EBF3FB; padding: 3px 10px; border-radius: 4px; border: 1px solid #C0D8EE; display: inline-block; margin: 2px; }
+.data-note { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7BAFD4; background: #EBF3FB; border-left: 3px solid #1E6BB8; padding: 8px 12px; border-radius: 0 4px 4px 0; margin-top: 8px; }
+.data-note-warn { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8a5a00; background: #FEF6E8; border-left: 3px solid #D4811A; padding: 8px 12px; border-radius: 0 4px 4px 0; margin-top: 8px; }
+.update-badge { display:inline-flex; align-items:center; gap:6px; background:#0A3620; border:1px solid #1E7A45; border-radius:20px; padding:4px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4DD68A; letter-spacing:0.08em; }
+.pulse { width:7px; height:7px; background:#4DD68A; border-radius:50%; animation:pulse 1.5s infinite; display:inline-block; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.3)} }
+.mode-badge-hist { display:inline-flex;align-items:center;gap:6px;background:#EBF3FB;border:1px solid #C0D8EE;border-radius:20px;padding:4px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#1E6BB8;letter-spacing:0.08em; }
+.mode-badge-pred { display:inline-flex;align-items:center;gap:6px;background:#FEF6E8;border:1px solid #F0C070;border-radius:20px;padding:4px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#D4811A;letter-spacing:0.08em; }
+.source-pill { display:inline-block;background:#162A42;border:1px solid #2A4A6A;border-radius:4px;padding:2px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#7BAFD4;letter-spacing:0.08em;margin:2px; }
+.rt-empty-box { background:#FFFFFF;border:2px dashed #C0D8EE;border-radius:12px;padding:56px 32px;text-align:center; }
 </style>
 """
+st.markdown(STYLE, unsafe_allow_html=True)
 
-# ── Plotly layout yang cocok dengan tema ──────────────────────
 PLOTLY_LAYOUT = dict(
     paper_bgcolor="rgba(255,255,255,1.0)",
-    plot_bgcolor="rgba(247,249,252,1.0)",
-    font=dict(family="Plus Jakarta Sans", color="#3A6A94", size=12),
-    xaxis=dict(gridcolor="#DBE8F6", zerolinecolor="#DBE8F6", color="#3A6A94"),
-    yaxis=dict(gridcolor="#DBE8F6", zerolinecolor="#DBE8F6", color="#3A6A94"),
-    title_font=dict(color="#0C1F35", size=14, family="Plus Jakarta Sans"),
+    plot_bgcolor="rgba(242,246,250,0.8)",
+    font=dict(family="Inter", color="#3A5070", size=12),
+    xaxis=dict(gridcolor="#D6E4F0", zerolinecolor="#D6E4F0", color="#5A7FA0"),
+    yaxis=dict(gridcolor="#D6E4F0", zerolinecolor="#D6E4F0", color="#5A7FA0"),
+    title_font=dict(color="#0D1F33", size=14, family="Inter"),
 )
 
 # =========================================
@@ -1674,3 +1428,4 @@ elif mode == "Prediksi":
                 m4.metric("R²",   f"{model_metrics['r2']:.4f}",   "Coefficient of Det.")
         else:
             st.info("Klik **▶ Jalankan Prediksi** di atas untuk memulai prediksi.")
+
