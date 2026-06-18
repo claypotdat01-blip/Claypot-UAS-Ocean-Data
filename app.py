@@ -1103,6 +1103,15 @@ elif mode == "Real Time":
   <span style="font-size:10px;color:#339966;">{detail}</span>
 </div>
 """, unsafe_allow_html=True)
+        else:
+            err_hints = [f"{k}: {v[:50]}" for k,v in api_errors.items() if v]
+            err_str = " | ".join(err_hints) if err_hints else "—"
+            st.markdown(f"""
+<div style="background:linear-gradient(135deg,#FFF8E8,#FDECC4);border:1.5px solid #F0C858;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a5a00;">
+  <b>Semua API tidak merespons</b> — estimasi klimatologis bulan {now_utc.strftime('%B')}.<br>
+  <span style="font-size:10px;">{err_str}</span>
+</div>
+""", unsafe_allow_html=True)
 
     if st.session_state.role == "nelayan":
         mean_fsi = float(df_rt["Fisheries_Index"].mean())
@@ -1154,6 +1163,13 @@ elif mode == "Real Time":
             cols_rt = st.columns(3)
             for idx, (label, val, src, ic) in enumerate(param_rt_list):
                 with cols_rt[idx % 3]:
+                    st.markdown(f"""
+<div class="fun-card" style="margin-bottom:12px;">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A88A8;text-transform:uppercase;letter-spacing:0.1em;">{label}</div>
+  <div style="font-size:22px;font-weight:800;color:#003F5E;margin:6px 0 4px;">{val}</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5A88A8;">{ic} {src}</div>
+</div>
+""", unsafe_allow_html=True)
 
         with tabs_rt[2]:
             st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG TERKINI</div>', unsafe_allow_html=True)
