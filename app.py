@@ -1066,18 +1066,37 @@ elif mode == "Real Time":
     arah_arus_rt,  ikon_arus_rt  = get_arah_arus(df_rt)
     arah_angin_rt, ikon_angin_rt = get_arah_angin(df_rt)
 
+# =========================================================
+# GANTI SELURUH FUNGSI _rt_banner DI app.py DENGAN INI:
+# =========================================================
+
     def _rt_banner(is_live, n_ok, n_all, update_wib, api_status, api_errors):
         if is_live:
-           # SESUDAH
-                SKIP_APIS = {"NASA MODIS"}
-                detail_parts = []
-                for api_name, ok in api_status.items():
-                    if api_name in SKIP_APIS:  # ← baris baru
-                        continue                # ← baris baru                        icon = "✓" if ok else "✗"
-                     err = api_errors.get(api_name, "")
-                    hint = f" ({err[:40]})" if (not ok and err) else ""
-                    detail_parts.append(f"{icon} {api_name}{hint}")
-                detail = " &nbsp;|&nbsp; ".join(detail_parts)
+            SKIP_APIS = {"NASA MODIS"}
+            detail_parts = []
+            for api_name, ok in api_status.items():
+                if api_name in SKIP_APIS:
+                    continue
+                icon = "✓" if ok else "✗"
+                err  = api_errors.get(api_name, "")
+                hint = f" ({err[:40]})" if (not ok and err) else ""
+                detail_parts.append(f"{icon} {api_name}{hint}")
+            detail = " &nbsp;|&nbsp; ".join(detail_parts)
+            st.markdown(f"""
+<div style="background:linear-gradient(135deg,#EDFAF3,#D4F5E5);border:1.5px solid #7DD9B8;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00875A;box-shadow:0 2px 8px rgba(0,137,90,0.10);">
+  <b>{n_ok}/{n_all} API aktif</b> · Diperbarui: {update_wib}<br>
+  <span style="font-size:10px;color:#339966;">{detail}</span>
+</div>
+""", unsafe_allow_html=True)
+        else:
+            err_hints = [f"{k}: {v[:50]}" for k, v in api_errors.items() if v]
+            err_str   = " | ".join(err_hints) if err_hints else "—"
+            st.markdown(f"""
+<div style="background:linear-gradient(135deg,#FFF8E8,#FDECC4);border:1.5px solid #F0C858;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a5a00;">
+  <b>Semua API tidak merespons</b> — estimasi klimatologis bulan {now_utc.strftime('%B')}.<br>
+  <span style="font-size:10px;">{err_str}</span>
+</div>
+""", unsafe_allow_html=True)
             st.markdown(f"""
 <div style="background:linear-gradient(135deg,#EDFAF3,#D4F5E5);border:1.5px solid #7DD9B8;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00875A;box-shadow:0 2px 8px rgba(0,137,90,0.10);">
   <b>{n_ok}/{n_all} API aktif</b> · Diperbarui: {update_wib}<br>
