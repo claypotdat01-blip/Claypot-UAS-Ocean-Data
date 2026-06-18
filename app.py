@@ -61,7 +61,6 @@ html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
 [data-testid="stSidebar"] .stButton > button:hover {
     background: rgba(0,201,224,0.2) !important; border-color: #00C9E0 !important;
 }
-
 .stButton > button {
     background: linear-gradient(135deg, #0077B6 0%, #00C9E0 100%) !important;
     border: none !important; color: #FFFFFF !important;
@@ -76,7 +75,6 @@ html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
     transform: translateY(-1px) !important;
     box-shadow: 0 6px 18px rgba(0,119,182,0.45) !important;
 }
-
 [data-testid="stMetric"] {
     background: #FFFFFF; border: 1px solid #C8E8F8;
     border-top: 3px solid #0077B6; border-radius: 12px;
@@ -90,7 +88,6 @@ html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
 [data-testid="stMetricValue"] {
     color: #003F5E !important; font-size: 26px !important; font-weight: 800 !important;
 }
-
 .stTabs [data-baseweb="tab-list"] {
     background: #FFFFFF !important; border-bottom: 2px solid #D0EDFB !important;
     border-radius: 12px 12px 0 0 !important; gap: 4px; padding: 4px 12px 0;
@@ -106,14 +103,11 @@ html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif; }
     background: rgba(0,119,182,0.08) !important; color: #0077B6 !important;
     border-bottom: 3px solid #00C9E0 !important; font-weight: 700 !important;
 }
-
 hr { border-color: rgba(0,201,224,0.25) !important; }
-
 [data-testid="stDataFrame"] {
     border-radius: 12px !important; overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,63,94,0.08);
 }
-
 .page-header {
     background: linear-gradient(135deg, #0077B6 0%, #00C9E0 100%);
     border-radius: 16px; padding: 24px 28px; margin-bottom: 24px;
@@ -128,7 +122,6 @@ hr { border-color: rgba(0,201,224,0.25) !important; }
     font-size: 26px; font-weight: 800; color: #FFFFFF;
     margin: 0; letter-spacing: -0.02em;
 }
-
 .section-label {
     font-family: 'JetBrains Mono', monospace; font-size: 10px;
     color: #0077B6; text-transform: uppercase; letter-spacing: 0.16em;
@@ -139,7 +132,6 @@ hr { border-color: rgba(0,201,224,0.25) !important; }
     content: ''; display: inline-block; width: 14px; height: 3px;
     background: linear-gradient(90deg, #0077B6, #00C9E0); border-radius: 2px;
 }
-
 .coord-tag {
     font-family: 'JetBrains Mono', monospace; font-size: 11px;
     color: #0077B6; background: rgba(0,201,224,0.12);
@@ -147,14 +139,12 @@ hr { border-color: rgba(0,201,224,0.25) !important; }
     border: 1px solid rgba(0,201,224,0.35);
     display: inline-block; margin: 2px; font-weight: 600;
 }
-
 .data-note {
     font-family: 'JetBrains Mono', monospace; font-size: 10px;
     color: #0077B6; background: rgba(0,201,224,0.08);
     border-left: 3px solid #00C9E0; padding: 8px 14px;
     border-radius: 0 8px 8px 0; margin-top: 8px; line-height: 1.7;
 }
-
 .update-badge {
     display: inline-flex; align-items: center; gap: 6px;
     background: rgba(0,201,167,0.15); border: 1px solid #00C9A7;
@@ -170,7 +160,6 @@ hr { border-color: rgba(0,201,224,0.25) !important; }
     0%,100% { opacity:1; transform:scale(1); }
     50%      { opacity:.4; transform:scale(1.4); }
 }
-
 .source-pill {
     display: inline-block; background: rgba(0,63,94,0.08);
     border: 1px solid rgba(0,119,182,0.2); border-radius: 20px;
@@ -178,13 +167,11 @@ hr { border-color: rgba(0,201,224,0.25) !important; }
     font-size: 9px; color: #5A88A8; letter-spacing: 0.08em;
     margin: 2px; font-weight: 600;
 }
-
 .rt-empty-box {
     background: #FFFFFF; border: 2px dashed rgba(0,201,224,0.5);
     border-radius: 16px; padding: 56px 32px; text-align: center;
     box-shadow: 0 4px 16px rgba(0,63,94,0.06);
 }
-
 .fun-card {
     background: #FFFFFF; border-radius: 14px; padding: 20px 22px;
     box-shadow: 0 3px 12px rgba(0,63,94,0.10); border: 1px solid #D0EDFB;
@@ -193,7 +180,6 @@ hr { border-color: rgba(0,201,224,0.25) !important; }
 .fun-card:hover {
     transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,63,94,0.14);
 }
-
 div[data-testid="stAlert"] { border-radius: 12px !important; }
 </style>
 """
@@ -463,42 +449,29 @@ def get_health_status(ohi_val, p25=None, p75=None):
 # HOME PAGE
 # =========================================
 if st.session_state.page == "home":
-
     st.markdown("""
 <div style="background:linear-gradient(135deg,#003F5E 0%,#0077B6 50%,#00C9E0 100%);border-radius:20px;padding:64px 48px 56px;text-align:center;margin-bottom:36px;position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(0,63,94,0.35);">
   <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 29px,rgba(255,255,255,0.04) 30px),repeating-linear-gradient(90deg,transparent,transparent 29px,rgba(255,255,255,0.04) 30px);pointer-events:none;"></div>
-  <div style="position:absolute;top:-40px;left:-40px;width:200px;height:200px;background:rgba(0,201,224,0.15);border-radius:50%;pointer-events:none;"></div>
-  <div style="position:absolute;bottom:-60px;right:-40px;width:280px;height:280px;background:rgba(0,201,167,0.12);border-radius:50%;pointer-events:none;"></div>
   <div style="position:relative;z-index:1;">
     <div style="display:inline-block;background:rgba(0,201,224,0.2);border:1px solid rgba(0,201,224,0.6);border-radius:30px;padding:6px 20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#7EEEFF;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:28px;">
       SISTEM AKTIF · 4°S–12°S / 129°E–144°E · LAUT ARAFURA
     </div>
-    <h1 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:80px;font-weight:800;color:#FFFFFF;letter-spacing:-0.04em;margin:0 0 4px;line-height:1;text-shadow:0 4px 20px rgba(0,0,0,0.2);">OCEANA</h1>
+    <h1 style="font-family:'Plus Jakarta Sans',sans-serif;font-size:80px;font-weight:800;color:#FFFFFF;letter-spacing:-0.04em;margin:0 0 4px;line-height:1;">OCEANA</h1>
     <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(0,201,224,0.9);letter-spacing:0.28em;text-transform:uppercase;margin-bottom:20px;">Platform Intelijen Oseanografi Papua</div>
     <div style="color:rgba(255,255,255,0.82);font-size:15px;max-width:520px;margin:0 auto 44px;line-height:1.85;">
       Data real-time multi-API, klimatologi historis 20 tahun,<br>dan proyeksi musiman berbasis model Prophet.
     </div>
     <div style="display:flex;justify-content:center;gap:40px;flex-wrap:wrap;">
-      <div style="text-align:center;">
-        <div style="font-size:38px;font-weight:800;color:#FFFFFF;">20+</div>
-        <div style="font-size:10px;color:rgba(0,201,224,0.85);font-family:'JetBrains Mono',monospace;letter-spacing:0.14em;margin-top:4px;">TAHUN DATA</div>
-      </div>
+      <div style="text-align:center;"><div style="font-size:38px;font-weight:800;color:#FFFFFF;">20+</div><div style="font-size:10px;color:rgba(0,201,224,0.85);font-family:'JetBrains Mono',monospace;letter-spacing:0.14em;margin-top:4px;">TAHUN DATA</div></div>
       <div style="width:1px;background:rgba(255,255,255,0.15);"></div>
-      <div style="text-align:center;">
-        <div style="font-size:38px;font-weight:800;color:#FFFFFF;">12</div>
-        <div style="font-size:10px;color:rgba(0,201,224,0.85);font-family:'JetBrains Mono',monospace;letter-spacing:0.14em;margin-top:4px;">PARAMETER</div>
-      </div>
+      <div style="text-align:center;"><div style="font-size:38px;font-weight:800;color:#FFFFFF;">12</div><div style="font-size:10px;color:rgba(0,201,224,0.85);font-family:'JetBrains Mono',monospace;letter-spacing:0.14em;margin-top:4px;">PARAMETER</div></div>
       <div style="width:1px;background:rgba(255,255,255,0.15);"></div>
-      <div style="text-align:center;">
-        <div style="font-size:38px;font-weight:800;color:#FFFFFF;">3</div>
-        <div style="font-size:10px;color:rgba(0,201,224,0.85);font-family:'JetBrains Mono',monospace;letter-spacing:0.14em;margin-top:4px;">API SUMBER</div>
-      </div>
+      <div style="text-align:center;"><div style="font-size:38px;font-weight:800;color:#FFFFFF;">3</div><div style="font-size:10px;color:rgba(0,201,224,0.85);font-family:'JetBrains Mono',monospace;letter-spacing:0.14em;margin-top:4px;">API SUMBER</div></div>
     </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-    # Source pills — tanpa emoji berlebihan
     st.markdown("""
 <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:36px;">
   <span style="background:#FFFFFF;border:1.5px solid #C8E8F8;color:#0077B6;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:7px 16px;border-radius:30px;box-shadow:0 2px 8px rgba(0,119,182,0.12);">CMEMS · Arus · SST · Salinitas · Klorofil-a</span>
@@ -507,7 +480,6 @@ if st.session_state.page == "home":
 </div>
 """, unsafe_allow_html=True)
 
-    # Role selection
     st.markdown("""
 <div style="text-align:center;margin-bottom:28px;">
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A88A8;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:10px;">Pilih Mode Tampilan</div>
@@ -519,7 +491,7 @@ if st.session_state.page == "home":
     with c1:
         st.markdown("""
 <div style="background:#FFFFFF;border:1.5px solid #C8E8F8;border-radius:16px;padding:32px 28px;text-align:center;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,119,182,0.10);">
-  <h3 style="color:#003F5E;font-size:19px;font-weight:800;margin:0 0 8px;letter-spacing:-0.01em;">Nelayan Lokal</h3>
+  <h3 style="color:#003F5E;font-size:19px;font-weight:800;margin:0 0 8px;">Nelayan Lokal</h3>
   <p style="color:#5A88A8;font-size:14px;margin:0 0 18px;line-height:1.7;">Peta zona tangkap, kondisi gelombang,<br>dan rekomendasi area melaut hari ini.</p>
   <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
     <span style="background:rgba(0,201,224,0.12);color:#0077B6;font-size:10px;padding:4px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;border:1px solid rgba(0,201,224,0.3);font-weight:600;">Zona Tangkap</span>
@@ -536,7 +508,7 @@ if st.session_state.page == "home":
     with c2:
         st.markdown("""
 <div style="background:#FFFFFF;border:1.5px solid #C8E8F8;border-radius:16px;padding:32px 28px;text-align:center;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,119,182,0.10);">
-  <h3 style="color:#003F5E;font-size:19px;font-weight:800;margin:0 0 8px;letter-spacing:-0.01em;">Akademisi / Peneliti</h3>
+  <h3 style="color:#003F5E;font-size:19px;font-weight:800;margin:0 0 8px;">Akademisi / Peneliti</h3>
   <p style="color:#5A88A8;font-size:14px;margin:0 0 18px;line-height:1.7;">12 parameter oseanografi, time series 20 tahun,<br>korelasi, dan proyeksi Prophet.</p>
   <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
     <span style="background:rgba(0,201,167,0.12);color:#00875A;font-size:10px;padding:4px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;border:1px solid rgba(0,201,167,0.3);font-weight:600;">Prophet Forecast</span>
@@ -550,25 +522,15 @@ if st.session_state.page == "home":
             st.session_state.page = "dashboard"
             st.rerun()
 
-    # Team card
     st.markdown("""
 <div style="background:#FFFFFF;border:1.5px solid #C8E8F8;border-radius:16px;padding:28px 32px;text-align:center;margin-top:32px;box-shadow:0 4px 16px rgba(0,119,182,0.08);">
   <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#00C9E0;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:20px;font-weight:600;">Tim Pengembang</div>
   <div style="display:flex;justify-content:center;gap:40px;flex-wrap:wrap;align-items:center;">
-    <div style="text-align:center;">
-      <div style="font-weight:700;color:#003F5E;font-size:13px;">Ratu Salwa Ghazalia Hade</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#5A88A8;margin-top:3px;">12923016</div>
-    </div>
+    <div style="text-align:center;"><div style="font-weight:700;color:#003F5E;font-size:13px;">Ratu Salwa Ghazalia Hade</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#5A88A8;margin-top:3px;">12923016</div></div>
     <div style="width:1px;height:36px;background:#C8E8F8;"></div>
-    <div style="text-align:center;">
-      <div style="font-weight:700;color:#003F5E;font-size:13px;">Diandra Aulia Ramadhani</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#5A88A8;margin-top:3px;">12923021</div>
-    </div>
+    <div style="text-align:center;"><div style="font-weight:700;color:#003F5E;font-size:13px;">Diandra Aulia Ramadhani</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#5A88A8;margin-top:3px;">12923021</div></div>
     <div style="width:1px;height:36px;background:#C8E8F8;"></div>
-    <div style="text-align:center;">
-      <div style="font-weight:700;color:#003F5E;font-size:13px;">Mutiara Nurani</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#5A88A8;margin-top:3px;">12923023</div>
-    </div>
+    <div style="text-align:center;"><div style="font-weight:700;color:#003F5E;font-size:13px;">Mutiara Nurani</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#5A88A8;margin-top:3px;">12923023</div></div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -603,7 +565,8 @@ with st.sidebar:
 
     if st.session_state.prev_mode != mode:
         keys_to_del = [k for k in st.session_state.keys() if k.startswith("Prediksi_")]
-        for k in keys_to_del: del st.session_state[k]
+        for k in keys_to_del:
+            del st.session_state[k]
         st.session_state.prev_mode = mode
 
     st.markdown("---")
@@ -647,11 +610,20 @@ with st.sidebar:
         if st.session_state.api_status:
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
             st.markdown("**Status Koneksi API:**")
+            SKIP_DISPLAY = {"NASA MODIS"}
+            for api_name, ok in st.session_state.api_status.items():
+                if api_name in SKIP_DISPLAY:
+                    continue
+                dot = "🟢" if ok else "🔴"
+                st.markdown(f"{dot} **{api_name}**", unsafe_allow_html=False)
 
         if st.session_state.last_update:
             wib = st.session_state.last_update + datetime.timedelta(hours=7)
             st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-            st.markdown(f"""<div class="update-badge"><span class="pulse"></span> TERAKHIR: {wib.strftime('%d %b %Y %H:%M')} WIB</div>""", unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="update-badge"><span class="pulse"></span> TERAKHIR: {wib.strftime("%d %b %Y %H:%M")} WIB</div>',
+                unsafe_allow_html=True,
+            )
 
     else:
         st.markdown("""<div class="data-note">Proyeksi dibuat dengan model Prophet (Meta) yang dilatih pada data historis 2001–2020.</div>""", unsafe_allow_html=True)
@@ -689,7 +661,8 @@ with st.sidebar:
 def _mean_or(df_src, col, default):
     if df_src is not None and hasattr(df_src, "columns") and col in df_src.columns and len(df_src):
         v = float(df_src[col].mean())
-        if np.isfinite(v): return v
+        if np.isfinite(v):
+            return v
     return default
 
 def build_map_from_df(df_src):
@@ -756,6 +729,38 @@ def render_perairan_card(df_map, arah_arus, ikon_arus, arah_angin, ikon_angin):
 
 
 # =========================================
+# FUNGSI BANNER RT — BERSIH, TANPA NASA MODIS
+# =========================================
+def _rt_banner(is_live, n_ok, n_all, update_wib, api_status, api_errors):
+    SKIP_APIS = {"NASA MODIS"}
+    if is_live:
+        detail_parts = []
+        for api_name, ok in api_status.items():
+            if api_name in SKIP_APIS:
+                continue
+            icon = "✓" if ok else "✗"
+            err  = api_errors.get(api_name, "")
+            hint = f" ({err[:40]})" if (not ok and err) else ""
+            detail_parts.append(f"{icon} {api_name}{hint}")
+        detail = " &nbsp;|&nbsp; ".join(detail_parts)
+        st.markdown(f"""
+<div style="background:linear-gradient(135deg,#EDFAF3,#D4F5E5);border:1.5px solid #7DD9B8;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00875A;box-shadow:0 2px 8px rgba(0,137,90,0.10);">
+  <b>{n_ok}/{n_all} API aktif</b> · Diperbarui: {update_wib}<br>
+  <span style="font-size:10px;color:#339966;">{detail}</span>
+</div>
+""", unsafe_allow_html=True)
+    else:
+        err_hints = [f"{k}: {v[:50]}" for k, v in api_errors.items() if v and k not in SKIP_APIS]
+        err_str   = " | ".join(err_hints) if err_hints else "—"
+        st.markdown(f"""
+<div style="background:linear-gradient(135deg,#FFF8E8,#FDECC4);border:1.5px solid #F0C858;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a5a00;">
+  <b>Semua API tidak merespons</b> — estimasi klimatologis.<br>
+  <span style="font-size:10px;">{err_str}</span>
+</div>
+""", unsafe_allow_html=True)
+
+
+# =========================================
 # MODE: HISTORIS
 # =========================================
 if mode == "Historis":
@@ -785,7 +790,6 @@ if mode == "Historis":
         with col_s4: st.metric("Kec. Arus",           f"{df_map['current_speed'].mean():.3f}", "m/s")
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
         tabs_n = st.tabs(["  Peta Zona Tangkap  ", "  Rose Diagram  ", "  Rekomendasi  "])
 
         with tabs_n[0]:
@@ -845,7 +849,8 @@ if mode == "Historis":
         PARAM_TERARAH = ["angin_u","angin_v","gelombang"]
         tampilkan_rose = parameter in PARAM_TERARAH
         tabs_labels = ["  Spasial  ","  Time Series  ","  Statistik  ","  Korelasi  "]
-        if tampilkan_rose: tabs_labels.append("  Rose Diagram  ")
+        if tampilkan_rose:
+            tabs_labels.append("  Rose Diagram  ")
         tabs = st.tabs(tabs_labels)
 
         with tabs[0]:
@@ -861,29 +866,19 @@ if mode == "Historis":
 
         with tabs[1]:
             st.markdown(f'<div class="section-label">TREN TEMPORAL 2001–2020 · {PARAM_LABELS.get(parameter, parameter)}</div>', unsafe_allow_html=True)
-
-            # ── RANGE SELECTOR biar bisa zoom ──
-            range_opt = st.radio(
-                "Rentang waktu",
+            range_opt = st.radio("Rentang waktu",
                 ["5 Tahun Terakhir", "10 Tahun Terakhir", "Semua (2001–2020)"],
-                horizontal=True, index=0,
-            )
-            serie = (
-                df.loc[:, ["time", parameter]].dropna(subset=[parameter])
-                  .set_index("time").sort_index()[parameter]
-                  .resample("MS").mean().dropna()
-            )
+                horizontal=True, index=0)
+            serie = (df.loc[:, ["time", parameter]].dropna(subset=[parameter])
+                       .set_index("time").sort_index()[parameter]
+                       .resample("MS").mean().dropna())
             df_ts  = serie.reset_index(); df_ts.columns = ["time", parameter]
-
-            # Filter rentang
-            t_max = df_ts["time"].max()
+            t_max  = df_ts["time"].max()
             if range_opt == "5 Tahun Terakhir":
                 df_ts = df_ts[df_ts["time"] >= t_max - pd.DateOffset(years=5)]
             elif range_opt == "10 Tahun Terakhir":
                 df_ts = df_ts[df_ts["time"] >= t_max - pd.DateOffset(years=10)]
-
             y_vals = df_ts[parameter].to_numpy(dtype=float)
-
             if len(df_ts) < 2:
                 st.info("Data tidak cukup untuk time series pada periode ini.")
             else:
@@ -892,9 +887,8 @@ if mode == "Historis":
                 y_trend = np.poly1d(z)(x_idx)
                 slope_per_year = z[0] * 12.0
                 arah_tren = "↑" if slope_per_year > 0 else "↓"
-                win = min(12, max(3, len(df_ts)//5))
+                win  = min(12, max(3, len(df_ts)//5))
                 roll = df_ts[parameter].rolling(window=win, center=True, min_periods=3).mean().to_numpy()
-
                 fig_ts = go.Figure()
                 fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_vals, mode="lines",
                     name=PARAM_LABELS.get(parameter, parameter),
@@ -904,11 +898,9 @@ if mode == "Historis":
                 fig_ts.add_trace(go.Scatter(x=df_ts["time"], y=y_trend, mode="lines",
                     name=f"Tren ({arah_tren} {abs(slope_per_year):.4f}/th)",
                     line=dict(color="#FFD166", width=2.2, dash="dot")))
-
                 finite = np.concatenate([y_vals, y_trend, roll[~np.isnan(roll)]])
                 y_lo, y_hi = float(np.min(finite)), float(np.max(finite))
                 span = y_hi - y_lo; pad = span * 0.10 if span > 0 else 1.0
-
                 fig_ts.update_layout(**PLOTLY_LAYOUT,
                     title=f"Tren Temporal · {PARAM_LABELS.get(parameter,parameter)} · {range_opt}",
                     legend=dict(font=dict(color="#3A6880",size=11), bgcolor="rgba(255,255,255,0.95)",
@@ -951,12 +943,11 @@ if mode == "Historis":
                 "salinitas":"SAL","chla":"CHL-a","gelombang":"WAVE","current_speed":"CurSpd",
                 "angin_u":"WindU","angin_v":"WindV","Ocean_Health_Index":"OHI","Fisheries_Index":"FSI",
             }
-            corr = numeric_df.corr().rename(index=SHORT_CORR, columns=SHORT_CORR)
+            corr   = numeric_df.corr().rename(index=SHORT_CORR, columns=SHORT_CORR)
             labels = list(corr.columns)
             n = len(labels); vals = corr.values
             zmin, zmax = float(np.nanmin(vals)), float(np.nanmax(vals))
             rng_z = (zmax - zmin) or 1.0
-
             fig_corr = go.Figure(go.Heatmap(
                 z=vals, x=labels, y=labels,
                 colorscale=[[0,"#EBF7FF"],[0.5,"#00C9E0"],[1,"#003F5E"]],
@@ -1034,12 +1025,13 @@ elif mode == "Real Time":
         else:
             df_rt = df_rt_raw.copy()
         is_live = True
-        active_apis = {k: v for k, v in st.session_state.api_status.items()}
+        active_apis = {k: v for k, v in st.session_state.api_status.items() if k != "NASA MODIS"}
         n_ok  = sum(1 for v in active_apis.values() if v)
         n_all = len(active_apis)
         sumber_badge = f"Data langsung dari API ({n_ok}/{n_all} aktif)"
     else:
-        df_rt = df[df["month"] == now_utc.month].copy(); is_live = False
+        df_rt = df[df["month"] == now_utc.month].copy()
+        is_live = False
         n_ok, n_all = 0, 3
         sumber_badge = "Estimasi klimatologis (semua API gagal)"
 
@@ -1066,53 +1058,6 @@ elif mode == "Real Time":
     arah_arus_rt,  ikon_arus_rt  = get_arah_arus(df_rt)
     arah_angin_rt, ikon_angin_rt = get_arah_angin(df_rt)
 
-# =========================================================
-# GANTI SELURUH FUNGSI _rt_banner DI app.py DENGAN INI:
-# =========================================================
-
-    def _rt_banner(is_live, n_ok, n_all, update_wib, api_status, api_errors):
-        if is_live:
-            SKIP_APIS = {"NASA MODIS"}
-            detail_parts = []
-            for api_name, ok in api_status.items():
-                if api_name in SKIP_APIS:
-                    continue
-                icon = "✓" if ok else "✗"
-                err  = api_errors.get(api_name, "")
-                hint = f" ({err[:40]})" if (not ok and err) else ""
-                detail_parts.append(f"{icon} {api_name}{hint}")
-            detail = " &nbsp;|&nbsp; ".join(detail_parts)
-            st.markdown(f"""
-<div style="background:linear-gradient(135deg,#EDFAF3,#D4F5E5);border:1.5px solid #7DD9B8;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00875A;box-shadow:0 2px 8px rgba(0,137,90,0.10);">
-  <b>{n_ok}/{n_all} API aktif</b> · Diperbarui: {update_wib}<br>
-  <span style="font-size:10px;color:#339966;">{detail}</span>
-</div>
-""", unsafe_allow_html=True)
-        else:
-            err_hints = [f"{k}: {v[:50]}" for k, v in api_errors.items() if v]
-            err_str   = " | ".join(err_hints) if err_hints else "—"
-            st.markdown(f"""
-<div style="background:linear-gradient(135deg,#FFF8E8,#FDECC4);border:1.5px solid #F0C858;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a5a00;">
-  <b>Semua API tidak merespons</b> — estimasi klimatologis bulan {now_utc.strftime('%B')}.<br>
-  <span style="font-size:10px;">{err_str}</span>
-</div>
-""", unsafe_allow_html=True)
-            st.markdown(f"""
-<div style="background:linear-gradient(135deg,#EDFAF3,#D4F5E5);border:1.5px solid #7DD9B8;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00875A;box-shadow:0 2px 8px rgba(0,137,90,0.10);">
-  <b>{n_ok}/{n_all} API aktif</b> · Diperbarui: {update_wib}<br>
-  <span style="font-size:10px;color:#339966;">{detail}</span>
-</div>
-""", unsafe_allow_html=True)
-        else:
-            err_hints = [f"{k}: {v[:50]}" for k,v in api_errors.items() if v]
-            err_str = " | ".join(err_hints) if err_hints else "—"
-            st.markdown(f"""
-<div style="background:linear-gradient(135deg,#FFF8E8,#FDECC4);border:1.5px solid #F0C858;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a5a00;">
-  <b>Semua API tidak merespons</b> — estimasi klimatologis bulan {now_utc.strftime('%B')}.<br>
-  <span style="font-size:10px;">{err_str}</span>
-</div>
-""", unsafe_allow_html=True)
-
     if st.session_state.role == "nelayan":
         mean_fsi = float(df_rt["Fisheries_Index"].mean())
         status   = get_fisheries_status(mean_fsi)
@@ -1124,7 +1069,8 @@ elif mode == "Real Time":
 </div>
 """, unsafe_allow_html=True)
 
-        _rt_banner(is_live, n_ok, n_all, update_wib, st.session_state.api_status, st.session_state.api_errors)
+        _rt_banner(is_live, n_ok, n_all, update_wib,
+                   st.session_state.api_status, st.session_state.api_errors)
 
         col_s1, col_s2, col_s3, col_s4 = st.columns([2,1,1,1])
         with col_s1:
@@ -1151,14 +1097,13 @@ elif mode == "Real Time":
             src_cmems, ic_cmems = _src_label(cmems_ok, "CMEMS")
             src_era5,  ic_era5  = _src_label(era5_ok,  "Open-Meteo")
             src_bmkg,  ic_bmkg  = _src_label(bmkg_ok,  "BMKG/Open-Meteo")
-
             param_rt_list = [
-                ("SST",          f"{float(df_rt['sst'].mean()):.2f} °C",                    src_cmems, ic_cmems),
-                ("Salinitas",    f"{float(df_rt['salinitas'].mean()):.2f} PSU",              src_cmems, ic_cmems),
-                ("Klorofil-a",   f"{float(df_rt['chla'].mean()):.3f} mg/m³",                src_cmems, ic_cmems),
-                ("Dissolved O₂", f"{float(df_rt['do'].mean()):.2f} mg/L",                   "Derivasi", "–"),
-                ("Gelombang",    f"{float(df_rt['gelombang'].mean()):.2f} m",               src_bmkg, ic_bmkg),
-                ("Angin U",      f"{float(df_rt['angin_u'].mean()):.2f} m/s",               src_era5, ic_era5),
+                ("SST",          f"{float(df_rt['sst'].mean()):.2f} °C",        src_cmems, ic_cmems),
+                ("Salinitas",    f"{float(df_rt['salinitas'].mean()):.2f} PSU",  src_cmems, ic_cmems),
+                ("Klorofil-a",   f"{float(df_rt['chla'].mean()):.3f} mg/m³",    src_cmems, ic_cmems),
+                ("Dissolved O₂", f"{float(df_rt['do'].mean()):.2f} mg/L",       "Derivasi", "–"),
+                ("Gelombang",    f"{float(df_rt['gelombang'].mean()):.2f} m",    src_bmkg, ic_bmkg),
+                ("Angin U",      f"{float(df_rt['angin_u'].mean()):.2f} m/s",   src_era5, ic_era5),
             ]
             cols_rt = st.columns(3)
             for idx, (label, val, src, ic) in enumerate(param_rt_list):
@@ -1199,7 +1144,8 @@ elif mode == "Real Time":
 </div>
 """, unsafe_allow_html=True)
 
-        _rt_banner(is_live, n_ok, n_all, update_wib, st.session_state.api_status, st.session_state.api_errors)
+        _rt_banner(is_live, n_ok, n_all, update_wib,
+                   st.session_state.api_status, st.session_state.api_errors)
 
         col1,col2,col3,col4 = st.columns(4)
         col1.metric("Rata-Rata", f"{df_map_rt[parameter].mean():.3f}")
@@ -1220,10 +1166,11 @@ elif mode == "Real Time":
 </div>
 """, unsafe_allow_html=True)
 
-        PARAM_TERARAH = ["angin_u","angin_v","gelombang"]
+        PARAM_TERARAH  = ["angin_u","angin_v","gelombang"]
         tampilkan_rose = parameter in PARAM_TERARAH
         tabs_labels_rt = ["  Spasial Terkini  ","  vs Historis  ","  Statistik  "]
-        if tampilkan_rose: tabs_labels_rt.append("  Rose Diagram  ")
+        if tampilkan_rose:
+            tabs_labels_rt.append("  Rose Diagram  ")
         tabs_rt_ak = st.tabs(tabs_labels_rt)
 
         with tabs_rt_ak[0]:
@@ -1238,17 +1185,15 @@ elif mode == "Real Time":
 
         with tabs_rt_ak[1]:
             hist_same_month = df[df["month"] == now_utc.month][parameter]
-            rt_val   = float(df_map_rt[parameter].mean())
-            hist_val = float(hist_same_month.mean())
-            delta    = rt_val - hist_val
+            rt_val    = float(df_map_rt[parameter].mean())
+            hist_val  = float(hist_same_month.mean())
+            delta     = rt_val - hist_val
             delta_pct = (delta / hist_val * 100) if hist_val != 0 else 0
-
             st.markdown(f'<div class="section-label">NILAI TERKINI vs RATA-RATA HISTORIS BULAN {now_utc.strftime("%B").upper()}</div>', unsafe_allow_html=True)
             c1c, c2c, c3c = st.columns(3)
             c1c.metric("Nilai Terkini",      f"{rt_val:.4f}",   f"{'+' if delta >= 0 else ''}{delta:.4f} vs historis")
             c2c.metric("Rata-Rata Historis", f"{hist_val:.4f}", f"Bulan {now_utc.strftime('%B')} (2001–2020)")
             c3c.metric("Deviasi (%)",        f"{delta_pct:+.2f}%", "terhadap klimatologi")
-
             df_ts_rt = df.groupby("time")[parameter].mean().reset_index()
             fig_compare = go.Figure()
             fig_compare.add_trace(go.Scatter(
@@ -1331,7 +1276,6 @@ elif mode == "Prediksi":
 """, unsafe_allow_html=True)
 
             st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
             fc_fsi, _ = st.session_state["Prediksi_nelayan_Fisheries_Index"]
             future_only = fc_fsi[fc_fsi["ds"] > df["time"].max()]
             fig_fsi_pred = go.Figure()
@@ -1351,7 +1295,6 @@ elif mode == "Prediksi":
             df_bulan_pred = df[df["month"] == month_idx_pred]
             arah_arus_pred,  ikon_arus_pred  = get_arah_arus(df_bulan_pred)
             arah_angin_pred, ikon_angin_pred = get_arah_angin(df_bulan_pred)
-
             fsi_pred_rows = fc_fsi[fc_fsi["ds"].dt.month == month_idx_pred]
             fsi_pred = float(fsi_pred_rows["yhat"].iloc[0]) if not fsi_pred_rows.empty else 50.0
 
@@ -1395,7 +1338,6 @@ elif mode == "Prediksi":
 
         if Prediksi_key in st.session_state:
             forecast_df, model_metrics = st.session_state[Prediksi_key]
-
             tabs_pred = st.tabs(["  Grafik Prediksi  ","  Komponen Model  ","  Tabel Prediksi  ","  Metrik Akurasi  "])
 
             with tabs_pred[0]:
@@ -1425,7 +1367,6 @@ elif mode == "Prediksi":
                     height=430)
                 with col_ph1:
                     st.plotly_chart(fig_fc, use_container_width=True)
-
                 if not target_rows.empty:
                     tv = float(target_rows["yhat"].iloc[0])
                     tl = float(target_rows["yhat_lower"].iloc[0])
@@ -1483,3 +1424,4 @@ elif mode == "Prediksi":
   <div style="color:#5A88A8;font-size:13px;">Model akan dilatih pada data historis 2001–2020.</div>
 </div>
 """, unsafe_allow_html=True)
+ENDOFFILE
