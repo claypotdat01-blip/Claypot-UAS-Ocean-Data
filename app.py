@@ -1424,4 +1424,3 @@ elif mode == "Prediksi":
   <div style="color:#5A88A8;font-size:13px;">Model akan dilatih pada data historis 2001–2020.</div>
 </div>
 """, unsafe_allow_html=True)
-ENDOFFILE
