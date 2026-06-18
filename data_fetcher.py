@@ -589,9 +589,11 @@ def build_realtime_dataframe(cmems_user, cmems_pass, cds_uid="", cds_key=""):
     # ── Derivasi & clip ───────────────────────────────────────────────────
     # current_speed: dihitung dari komponen arus (selalu tersedia)
     merged["current_speed"] = float(np.sqrt(merged["uo"] ** 2 + merged["vo"] ** 2))
-    print("UO =", merged["uo"])
-    print("VO =", merged["vo"])
-    print("CURRENT =", merged["current_speed"])
+    print("===== DEBUG ARUS =====")
+    print("UO =", merged.get("uo"))
+    print("VO =", merged.get("vo"))
+    print("CURRENT =", merged.get("current_speed"))
+    print("======================")
     # SSTA: SST dikurangi baseline klimatologi ~28.5°C (World Ocean Atlas Arafura)
     merged["ssta"] = float(merged.get("sst", 28.5)) - 28.5
 
