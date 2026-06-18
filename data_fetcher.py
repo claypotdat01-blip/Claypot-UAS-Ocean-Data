@@ -134,8 +134,10 @@ def fetch_cmems(user, password):
                             v = pd.to_numeric(df_raw[src], errors="coerce").dropna()
                             if len(v):
                                 result[dst] = float(v.mean())
+                                print(f"{dst} = {float(v.mean())}")
                     if "uo" in result:
                         print(f"[CMEMS] ✓ Fisik ERDDAP: {dataset_id}")
+                        
                         break
             elif resp.status_code == 401:
                 return {"ok": False, "data": None,
