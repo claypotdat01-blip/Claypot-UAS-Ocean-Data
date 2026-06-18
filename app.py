@@ -1163,13 +1163,6 @@ elif mode == "Real Time":
             cols_rt = st.columns(3)
             for idx, (label, val, src, ic) in enumerate(param_rt_list):
                 with cols_rt[idx % 3]:
-                    st.markdown(f"""
-<div class="fun-card" style="margin-bottom:12px;">
-  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5A88A8;text-transform:uppercase;letter-spacing:0.1em;">{label}</div>
-  <div style="font-size:22px;font-weight:800;color:#003F5E;margin:6px 0 4px;">{val}</div>
-  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5A88A8;">{ic} {src}</div>
-</div>
-""", unsafe_allow_html=True)
 
         with tabs_rt[2]:
             st.markdown('<div class="section-label">ROSE DIAGRAM — ANGIN & GELOMBANG TERKINI</div>', unsafe_allow_html=True)
