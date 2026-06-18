@@ -1103,15 +1103,6 @@ elif mode == "Real Time":
   <span style="font-size:10px;color:#339966;">{detail}</span>
 </div>
 """, unsafe_allow_html=True)
-        else:
-            err_hints = [f"{k}: {v[:50]}" for k,v in api_errors.items() if v]
-            err_str = " | ".join(err_hints) if err_hints else "—"
-            st.markdown(f"""
-<div style="background:linear-gradient(135deg,#FFF8E8,#FDECC4);border:1.5px solid #F0C858;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a5a00;">
-  <b>Semua API tidak merespons</b> — estimasi klimatologis bulan {now_utc.strftime('%B')}.<br>
-  <span style="font-size:10px;">{err_str}</span>
-</div>
-""", unsafe_allow_html=True)
 
     if st.session_state.role == "nelayan":
         mean_fsi = float(df_rt["Fisheries_Index"].mean())
