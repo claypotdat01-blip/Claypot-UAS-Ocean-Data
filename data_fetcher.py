@@ -611,38 +611,76 @@ def build_realtime_dataframe(cmems_user, cmems_pass, cds_uid="", cds_key=""):
     df_out = pd.DataFrame([merged])
 
     # ── Hitung indeks komposit (sama dengan app.py) ───────────────────────
+    # ── Hitung indeks komposit (sama dengan app.py) ───────────────────────
+    
     def _norm(s, vmin, vmax):
-        return (s - vmin) / (vmax - vmin) if (vmax - vmin) != 0 else s * 0
-
+        s = np.asarray(s, dtype=float)
+    
+        if (vmax - vmin) == 0:
+            return np.zeros_like(s)
+    
+        return np.clip(
+            (s - vmin) / (vmax - vmin),
+            0.0,
+            1.0
+        )
+    
     def _suit(s, lo, opt_lo, opt_hi, hi):
-        s     = np.asarray(s, dtype=float)
-        naik  = np.clip((s - lo)  / max(opt_lo - lo,  1e-9), 0.0, 1.0)
-        turun = np.clip((hi - s)  / max(hi - opt_hi,  1e-9), 0.0, 1.0)
+        s = np.asarray(s, dtype=float)
+    
+        naik = np.clip(
+            (s - lo) / max(opt_lo - lo, 1e-9),
+            0.0,
+            1.0
+        )
+    
+        turun = np.clip(
+            (hi - s) / max(hi - opt_hi, 1e-9),
+            0.0,
+            1.0
+        )
+    
         return np.minimum(naik, turun)
-
-    # OHI — sesuai app.py
+    
+    # ── Ocean Health Index ────────────────────────────────────────────────
+    
     df_out["Ocean_Health_Index"] = (
-        0.30 * _norm(df_out["do"],  4.5,  7.5) +
-        0.25 * _norm(df_out["ph"],  7.9,  8.4) +
-        0.20 * _suit(df_out["chla"],     0.05, 0.10, 0.40, 0.80) +
-        0.15 * _suit(df_out["salinitas"],32.0, 33.5, 35.0, 36.5) +
-        0.10 * _suit(df_out["sst"],      22.0, 26.0, 30.0, 32.0)
+        0.30 * _norm(df_out["do"], 4.5, 7.5) +
+        0.25 * _norm(df_out["ph"], 7.9, 8.4) +
+        0.20 * _suit(df_out["chla"], 0.05, 0.10, 0.40, 0.80) +
+        0.15 * _suit(df_out["salinitas"], 32.0, 33.5, 35.0, 36.5) +
+        0.10 * _suit(df_out["sst"], 22.0, 26.0, 30.0, 32.0)
     ) * 100
-
-    # FSI — sesuai app.py
+    
+    # Batasi 0–100
+    df_out["Ocean_Health_Index"] = np.clip(
+        df_out["Ocean_Health_Index"],
+        0,
+        100
+    )
+    
+    # ── Fisheries Index ──────────────────────────────────────────────────
+    
     df_out["Fisheries_Index"] = (
-        0.35 * _norm(df_out["chla"],          0.05, 0.8) +
-        0.25 * _suit(df_out["sst"],           24.0, 28.0, 30.0, 33.0) +
-        0.20 * _norm(df_out["do"],            4.5,  7.5) +
-        0.10 * _norm(df_out["current_speed"], 0.0,  0.25) +
+        0.35 * _norm(df_out["chla"], 0.05, 0.80) +
+        0.25 * _suit(df_out["sst"], 24.0, 28.0, 30.0, 33.0) +
+        0.20 * _norm(df_out["do"], 4.5, 7.5) +
+        0.10 * _norm(df_out["current_speed"], 0.0, 0.25) +
         0.10 * (1 - _norm(df_out["gelombang"], 0.2, 2.5))
     ) * 100
-
+    
+    # Batasi 0–100
+    df_out["Fisheries_Index"] = np.clip(
+        df_out["Fisheries_Index"],
+        0,
+        100
+    )
+    
     n_ok = sum(status.values())
     print(f"\n[OCEANA] Selesai: {n_ok}/3 API berhasil")
-
+    
     return {
-        "data":   df_out if any_ok else None,
+        "data": df_out if any_ok else None,
         "status": status,
         "errors": errors,
     }
