@@ -1068,13 +1068,17 @@ elif mode == "Real Time":
 
     def _rt_banner(is_live, n_ok, n_all, update_wib, api_status, api_errors):
         if is_live:
-            detail_parts = []
-            for api_name, ok in api_status.items():
-                icon = "✓" if ok else "✗"
-                err = api_errors.get(api_name, "")
-                hint = f" ({err[:40]})" if (not ok and err) else ""
-                detail_parts.append(f"{icon} {api_name}{hint}")
-            detail = " &nbsp;|&nbsp; ".join(detail_parts)
+           # SESUDAH
+                SKIP_APIS = {"NASA MODIS"}
+                detail_parts = []
+                for api_name, ok in api_status.items():
+                    if api_name in SKIP_APIS:  # ← baris baru
+                        continue                # ← baris baru
+                    icon = "✓" if ok else "✗"
+                    err = api_errors.get(api_name, "")
+                    hint = f" ({err[:40]})" if (not ok and err) else ""
+                    detail_parts.append(f"{icon} {api_name}{hint}")
+                detail = " &nbsp;|&nbsp; ".join(detail_parts)
             st.markdown(f"""
 <div style="background:linear-gradient(135deg,#EDFAF3,#D4F5E5);border:1.5px solid #7DD9B8;border-radius:12px;padding:10px 16px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#00875A;box-shadow:0 2px 8px rgba(0,137,90,0.10);">
   <b>{n_ok}/{n_all} API aktif</b> · Diperbarui: {update_wib}<br>
