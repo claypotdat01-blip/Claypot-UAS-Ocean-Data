@@ -1047,7 +1047,7 @@ elif mode == "Real Time":
         ) * 100
     if "Fisheries_Index" not in df_rt.columns:
         df_rt["Fisheries_Index"] = (
-            0.35 * normalisasi_global(df_rt["chla"], 0.05, 0.8) +
+            0.35 * suitabilitas_optimal(df["chla"], 0.05, 0.10, 0.50, 0.80) +
             0.25 * suitabilitas_optimal(df_rt["sst"], 24.0, 28.0, 30.0, 33.0) +
             0.20 * normalisasi_global(df_rt["do"], 4.5, 7.5) +
             0.10 * normalisasi_global(df_rt["current_speed"], 0.0, 0.25) +
