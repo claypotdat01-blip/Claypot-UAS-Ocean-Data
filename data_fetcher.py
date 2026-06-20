@@ -336,8 +336,8 @@ def _fetch_openmeteo_wind():
             "data": {
                 "angin_u":   float(np.mean(all_u))   if all_u   else -1.5,
                 "angin_v":   float(np.mean(all_v))   if all_v   else -0.5,
-                "gelombang": float(np.clip(np.mean(all_wave), 0.2, 2.5))
-                "wave_direction": float(np.mean(all_wave_dir)) if all_wave_dir else None, if all_wave else 0.8,
+                "gelombang": float(np.clip(np.mean(all_wave), 0.2, 2.5)), if all_wave else 0.8,
+                "wave_direction": float(np.mean(all_wave_dir)) if all_wave_dir else None, 
                 "source_era5":      False,
                 "source_openmeteo": True,
             },
