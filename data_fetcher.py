@@ -40,6 +40,13 @@ SAMPLE_POINTS = [
     (-9.0,  134.0),
 ]
 
+# ── Rentang fisik realistis Laut Arafura ─────────────────────────────────────
+# Berdasarkan literatur: arus permukaan Arafura umumnya 0.03–0.20 m/s,
+# maksimum saat musim muson bisa mencapai ~0.35 m/s.
+UO_MIN, UO_MAX   = -0.40, 0.40   # m/s — komponen zonal arus
+VO_MIN, VO_MAX   = -0.30, 0.30   # m/s — komponen meridional arus
+CS_MAX           =  0.45          # m/s — current_speed maksimum realistis
+
 
 def _get(url, auth=None, params=None, timeout=15, headers=None):
     import requests
@@ -102,8 +109,6 @@ def fetch_cmems(user, password):
     lon_c    = (LON_MIN + LON_MAX) / 2
 
     # ── A. Fisik: arus (uo/vo), SST, salinitas via ERDDAP ────────────────
-    # Dataset NRT CMEMS untuk Laut Arafura. Variabel:
-    #   uo/vo = arus permukaan, thetao = SST, so = salinitas
     PHY_DATASETS = [
         "cmems_mod_glo_phy_anfc_0.083deg_PT1H-i",
         "cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i",
@@ -111,7 +116,6 @@ def fetch_cmems(user, password):
     ]
     for dataset_id in PHY_DATASETS:
         url   = f"https://nrt.cmems-du.eu/erddap/griddap/{dataset_id}.json"
-        # Stride :4 agar respons ringan (~16 titik per dimensi)
         query = (
             f"?uo[({start_dt}Z):1:({end_dt}Z)][0:1:0]"
             f"[({lat_c - 2}):4:({lat_c + 2})]"
@@ -137,7 +141,6 @@ def fetch_cmems(user, password):
                                 print(f"{dst} = {float(v.mean())}")
                     if "uo" in result:
                         print(f"[CMEMS] ✓ Fisik ERDDAP: {dataset_id}")
-                        
                         break
             elif resp.status_code == 401:
                 return {"ok": False, "data": None,
@@ -147,14 +150,12 @@ def fetch_cmems(user, password):
             continue
 
     # ── A2. Fallback fisik: Copernicus Marine REST subset API ─────────────
-    # Jika ERDDAP gagal semua, coba subset API baru (v2) yang lebih stabil.
+    # [FIX] OPeNDAP fallback diperbaiki: filter angka lebih ketat agar tidak
+    # menyedot nilai dari header/koordinat yang menyebabkan uo/vo ekstrem.
     if "uo" not in result:
         print("[CMEMS] ERDDAP fisik gagal, coba Copernicus Marine subset API...")
         try:
-            # Subset API: ambil titik tengah kawasan Arafura
             subset_url = "https://nrt.cmems-du.eu/thredds/dodsC/cmems_mod_glo_phy_anfc_0.083deg_PT1H-i"
-            # Coba via OPeNDAP ASCII — lebih ringan dari NetCDF
-            now_str = now.strftime("%Y-%m-%dT%H:00:00")
             opendap_url = (
                 f"{subset_url}.ascii"
                 f"?uo[0][0][{int((lat_c+2-LAT_MIN)/0.083)}:{int((lat_c-2-LAT_MIN)/0.083)}]"
@@ -162,19 +163,33 @@ def fetch_cmems(user, password):
             )
             resp2 = _get(opendap_url, auth=(user, password), timeout=15)
             if resp2.status_code == 200:
-                # Parse nilai numerik dari respons ASCII
+                # [FIX] Filter jauh lebih ketat: hanya nilai dalam rentang fisik
+                # arus Arafura yang realistis (~±0.4 m/s), bukan ±5.0 yang
+                # sebelumnya menyebabkan angka koordinat/timestamp ikut terambil.
                 nums = re.findall(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", resp2.text)
-                floats = [float(x) for x in nums if -5.0 < float(x) < 5.0]
-                if floats:
-                    result["uo"] = float(np.mean(floats[:len(floats)//2]))
-                    result["vo"] = float(np.mean(floats[len(floats)//2:]))
-                    print("[CMEMS] ✓ Fisik OPeNDAP fallback")
+                floats = []
+                for x in nums:
+                    try:
+                        val = float(x)
+                        # Hanya ambil nilai yang masuk akal sebagai komponen arus (m/s)
+                        if UO_MIN <= val <= UO_MAX:
+                            floats.append(val)
+                    except ValueError:
+                        pass
+                if len(floats) >= 4:
+                    half = len(floats) // 2
+                    uo_val = float(np.mean(floats[:half]))
+                    vo_val = float(np.mean(floats[half:]))
+                    # Clip sekali lagi untuk keamanan
+                    result["uo"] = float(np.clip(uo_val, UO_MIN, UO_MAX))
+                    result["vo"] = float(np.clip(vo_val, VO_MIN, VO_MAX))
+                    print(f"[CMEMS] ✓ Fisik OPeNDAP fallback: uo={result['uo']:.4f}, vo={result['vo']:.4f}")
+                else:
+                    print("[CMEMS] OPeNDAP: tidak cukup nilai arus yang valid, skip.")
         except Exception as e:
             print(f"[CMEMS] OPeNDAP fallback: {str(e)[:60]}")
 
     # ── B. Klorofil-a dari CMEMS Ocean Colour bio dataset ────────────────
-    # Dataset NRT ocean colour L4 (gapfree, 4 km). Variabel: CHL.
-    # Coba D-2 s/d D-5 karena NRT ocean colour butuh 2-3 hari proses.
     BIO_DATASETS = [
         ("cmems_obs-oc_glo_bgc-plankton_nrt_l4-gapfree-multi-4km_P1D", "CHL"),
         ("cmems_obs-oc_glo_bgc-plankton_my_l4-multi-4km_P1D",          "CHL"),
@@ -218,6 +233,13 @@ def fetch_cmems(user, password):
 
     # ── Kembalikan hasil ──────────────────────────────────────────────────
     if result:
+        # [FIX] Clip uo/vo dari ERDDAP juga — data ERDDAP kadang mengandung
+        # outlier saat grid query mengenai area transisi atau data yang belum QC.
+        if "uo" in result:
+            result["uo"] = float(np.clip(result["uo"], UO_MIN, UO_MAX))
+        if "vo" in result:
+            result["vo"] = float(np.clip(result["vo"], VO_MIN, VO_MAX))
+
         if "ssta" not in result and "sst" in result:
             result["ssta"] = result["sst"] - 28.5
         result["source_cmems"] = True
@@ -245,8 +267,6 @@ def fetch_era5(cds_uid="", cds_key=""):
     """
     Angin 10m (u10/v10) dari ERA5 atau Open-Meteo.
     Open-Meteo gratis (tanpa akun), ERA5 via CDS opsional.
-    Gelombang juga dicoba dari Open-Meteo Marine di sini sebagai fallback
-    sebelum BMKG dipanggil.
     """
     print("[ERA5] Mencoba Open-Meteo...")
     result_om = _fetch_openmeteo_wind()
@@ -589,19 +609,28 @@ def build_realtime_dataframe(cmems_user, cmems_pass, cds_uid="", cds_key=""):
         print(f"[OCEANA] ✗ BMKG: {errors.get('BMKG','')[:80]}")
 
     # ── Derivasi & clip ───────────────────────────────────────────────────
-    # current_speed: dihitung dari komponen arus (selalu tersedia)
-    merged["current_speed"] = float(np.sqrt(merged["uo"] ** 2 + merged["vo"] ** 2))
+
+    # [FIX] Clip uo/vo ke rentang fisik realistis Laut Arafura SEBELUM
+    # menghitung current_speed. Ini mencegah nilai ekstrem dari OPeNDAP
+    # fallback atau outlier ERDDAP menyebabkan current_speed tidak wajar.
+    merged["uo"] = float(np.clip(merged.get("uo", -0.06), UO_MIN, UO_MAX))
+    merged["vo"] = float(np.clip(merged.get("vo", -0.01), VO_MIN, VO_MAX))
+
+    # current_speed: dihitung dari komponen arus yang sudah di-clip
+    merged["current_speed"] = float(np.clip(
+        np.sqrt(merged["uo"] ** 2 + merged["vo"] ** 2),
+        0.0,
+        CS_MAX,  # [FIX] clip eksplisit ke maksimum realistis Arafura (~0.45 m/s)
+    ))
+
     # SSTA: SST dikurangi baseline klimatologi ~28.5°C (World Ocean Atlas Arafura)
     merged["ssta"] = float(merged.get("sst", 28.5)) - 28.5
 
     # DO: derivasi empiris. Tidak ada API publik real-time gratis untuk DO laut.
-    # Hubungan Garcia & Gordon (1992): DO turun ~0.15 mg/L per +1°C SST di tropis.
-    # Baseline DO = 6.5 mg/L pada SST 28°C untuk Laut Arafura (CMEMS BGC mean).
     sst_val = float(merged.get("sst", 28.5))
     merged["do"] = float(np.clip(6.5 - 0.15 * (sst_val - 28.0), 4.5, 7.5))
 
-    # pH: tidak ada API publik real-time gratis. Diestimasi dari klimatologi
-    # dengan koreksi lemah terhadap SST (SST naik → CO2 lebih larut → pH turun).
+    # pH: tidak ada API publik real-time gratis.
     merged["ph"] = float(np.clip(8.12 - 0.005 * (sst_val - 28.0), 7.9, 8.4))
 
     # Clip semua ke rentang fisik yang valid
@@ -609,77 +638,45 @@ def build_realtime_dataframe(cmems_user, cmems_pass, cds_uid="", cds_key=""):
     merged["salinitas"] = float(np.clip(merged.get("salinitas", 34.2), 32.0, 36.5))
     merged["gelombang"] = float(np.clip(merged.get("gelombang", 0.85), 0.2,  2.5))
 
+    print(f"[OCEANA] uo={merged['uo']:.4f} m/s, vo={merged['vo']:.4f} m/s, "
+          f"current_speed={merged['current_speed']:.4f} m/s")
+
     df_out = pd.DataFrame([merged])
 
     # ── Hitung indeks komposit (sama dengan app.py) ───────────────────────
-    # ── Hitung indeks komposit (sama dengan app.py) ───────────────────────
-    
     def _norm(s, vmin, vmax):
         s = np.asarray(s, dtype=float)
-    
         if (vmax - vmin) == 0:
             return np.zeros_like(s)
-    
-        return np.clip(
-            (s - vmin) / (vmax - vmin),
-            0.0,
-            1.0
-        )
-    
+        return np.clip((s - vmin) / (vmax - vmin), 0.0, 1.0)
+
     def _suit(s, lo, opt_lo, opt_hi, hi):
         s = np.asarray(s, dtype=float)
-    
-        naik = np.clip(
-            (s - lo) / max(opt_lo - lo, 1e-9),
-            0.0,
-            1.0
-        )
-    
-        turun = np.clip(
-            (hi - s) / max(hi - opt_hi, 1e-9),
-            0.0,
-            1.0
-        )
-    
+        naik  = np.clip((s - lo)  / max(opt_lo - lo,  1e-9), 0.0, 1.0)
+        turun = np.clip((hi - s)  / max(hi - opt_hi,  1e-9), 0.0, 1.0)
         return np.minimum(naik, turun)
-    
+
     # ── Ocean Health Index ────────────────────────────────────────────────
-    
-    df_out["Ocean_Health_Index"] = (
+    df_out["Ocean_Health_Index"] = np.clip((
         0.30 * _norm(df_out["do"], 4.5, 7.5) +
         0.25 * _norm(df_out["ph"], 7.9, 8.4) +
         0.20 * _suit(df_out["chla"], 0.05, 0.10, 0.40, 0.80) +
         0.15 * _suit(df_out["salinitas"], 32.0, 33.5, 35.0, 36.5) +
         0.10 * _suit(df_out["sst"], 22.0, 26.0, 30.0, 32.0)
-    ) * 100
-    
-    # Batasi 0–100
-    df_out["Ocean_Health_Index"] = np.clip(
-        df_out["Ocean_Health_Index"],
-        0,
-        100
-    )
-    
+    ) * 100, 0, 100)
+
     # ── Fisheries Index ──────────────────────────────────────────────────
-    
-    df_out["Fisheries_Index"] = (
+    df_out["Fisheries_Index"] = np.clip((
         0.35 * _norm(df_out["chla"], 0.05, 0.80) +
         0.25 * _suit(df_out["sst"], 24.0, 28.0, 30.0, 33.0) +
         0.20 * _norm(df_out["do"], 4.5, 7.5) +
         0.10 * _norm(df_out["current_speed"], 0.0, 0.25) +
         0.10 * (1 - _norm(df_out["gelombang"], 0.2, 2.5))
-    ) * 100
-    
-    # Batasi 0–100
-    df_out["Fisheries_Index"] = np.clip(
-        df_out["Fisheries_Index"],
-        0,
-        100
-    )
-    
+    ) * 100, 0, 100)
+
     n_ok = sum(status.values())
     print(f"\n[OCEANA] Selesai: {n_ok}/3 API berhasil")
-    
+
     return {
         "data": df_out if any_ok else None,
         "status": status,
