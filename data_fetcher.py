@@ -285,7 +285,7 @@ def fetch_era5(cds_uid="", cds_key=""):
 
 
 def _fetch_openmeteo_wind():
-    all_u, all_v, all_wave = [], [], []
+    all_u, all_v, all_wave, all_wave_dir = [], [], [], []
     for lat, lon in SAMPLE_POINTS:
         try:
             resp = _get(
@@ -314,7 +314,7 @@ def _fetch_openmeteo_wind():
                 "https://marine-api.open-meteo.com/v1/marine",
                 params={
                     "latitude": lat, "longitude": lon,
-                    "current":  "wave_height,wind_wave_height",
+                    "current":  "wave_height,wind_wave_height,wave_direction",
                     "timezone": "UTC", "forecast_days": 1,
                 },
                 timeout=10,
@@ -322,8 +322,11 @@ def _fetch_openmeteo_wind():
             if resp.status_code == 200:
                 cur = resp.json().get("current", {})
                 wh  = cur.get("wave_height") or cur.get("wind_wave_height")
+                wd  = cur.get("wave_direction")
                 if wh is not None:
                     all_wave.append(float(wh))
+    if wd is not None:
+        all_wave_dir.append(float(wd))
         except Exception:
             pass
 
@@ -334,6 +337,7 @@ def _fetch_openmeteo_wind():
                 "angin_u":   float(np.mean(all_u))   if all_u   else -1.5,
                 "angin_v":   float(np.mean(all_v))   if all_v   else -0.5,
                 "gelombang": float(np.clip(np.mean(all_wave), 0.2, 2.5))
+                "wave_direction": float(np.mean(all_wave_dir)) if all_wave_dir else None,
                              if all_wave else 0.8,
                 "source_era5":      False,
                 "source_openmeteo": True,
