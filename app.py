@@ -404,7 +404,10 @@ def make_wind_rose(df_src, title="Rose Diagram Angin"):
 def make_wave_rose(df_src, title="Rose Diagram Gelombang"):
     if df_src.empty: return go.Figure()
     speed = df_src["gelombang"]
-    direction_deg = (np.degrees(np.arctan2(df_src["uo"], df_src["vo"])) + 360) % 360
+    if "wave_direction" in df_src.columns and df_src["wave_direction"].notna().any():
+        direction_deg = df_src["wave_direction"]
+    else:
+        direction_deg = (np.degrees(np.arctan2(df_src["uo"], df_src["vo"])) + 360) % 360
     n_bins = 16; bin_edges = np.linspace(0, 360, n_bins + 1)
     wave_bins   = [0, 0.5, 1.0, 1.5, 2.0, 10]
     wave_labels = ["< 0.5 m","0.5–1 m","1–1.5 m","1.5–2 m","> 2 m"]
