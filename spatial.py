@@ -36,8 +36,8 @@ def suitabilitas_optimal(x, lo, opt_lo, opt_hi, hi):
     Dipakai untuk parameter ber-'rentang ideal' (chl-a trofik, jendela termal SST).
     """
     x = np.asarray(x, dtype=float)
-    naik  = np.clip((x - lo) / max(opt_lo - lo, 1e-9), 0.0, 1.0)   # ramp 0->1
-    turun = np.clip((hi - x) / max(hi - opt_hi, 1e-9), 0.0, 1.0)   # ramp 1->0
+    naik  = np.clip((x - lo) / max(opt_lo - lo, 1e-9), 0.0, 1.0)
+    turun = np.clip((hi - x) / max(hi - opt_hi, 1e-9), 0.0, 1.0)
     return np.minimum(naik, turun)
 
 
@@ -117,31 +117,39 @@ def build_spatial_grid(uo: float = -0.05, vo: float = -0.01,
     grid_vo    = vo + vs * 0.006
     grid_speed = np.sqrt(grid_uo**2 + grid_vo**2)
 
-    grid_do   = np.clip(do   - vs * 0.06,  4.5, 7.5)
-    grid_ph   = np.clip(ph   + vs * 0.005, 7.9, 8.4)
+    grid_do   = np.clip(do   - vs * 0.06,  4.5,  7.5)
+    grid_ph   = np.clip(ph   + vs * 0.005, 7.9,  8.4)
     grid_chla = np.clip(chla + vs * 0.012, 0.05, 0.8)
     grid_sal  = np.clip(sal  + vs * 0.04,  32.0, 36.5)
-    grid_wave = np.clip(wave + vs * 0.05,  0.2, 2.5)
-    grid_sst  = np.clip(sst  + vs * 0.18,  26.0, 32.0)
+    grid_wave = np.clip(wave + vs * 0.05,  0.2,  2.5)
+
+    # [FIX] Clip SST sesuai rentang PENUH yang dipakai suitabilitas_optimal OHI
+    # (lo=22, hi=32) dan FSI (lo=24, hi=33). Sebelumnya clip mulai 26.0 sehingga
+    # ramp naik OHI (22→26) tidak pernah terjadi dan skor SST selalu mulai dari 1,
+    # menyebabkan OHI terkesan "stuck" dan tidak berubah wajar antar bulan.
+    grid_sst  = np.clip(sst  + vs * 0.18, 22.0, 33.0)
+
     grid_ssta = ssta + vs * 0.06
 
     # ── Indeks — FORMULA IDENTIK dengan app.py (sumber kebenaran tunggal) ──
     grid_sohi = (
-        0.30 * normalisasi_global(grid_do, 4.5, 7.5) +
-        0.25 * normalisasi_global(grid_ph, 7.9, 8.4) +
+        0.30 * normalisasi_global(grid_do,   4.5,  7.5) +
+        0.25 * normalisasi_global(grid_ph,   7.9,  8.4) +
         0.20 * suitabilitas_optimal(grid_chla, 0.05, 0.10, 0.40, 0.80) +
-        0.15 * suitabilitas_optimal(grid_sal, 32.0, 33.5, 35.0, 36.5) +
-        0.10 * suitabilitas_optimal(grid_sst, 22.0, 26.0, 30.0, 32.0)
+        0.15 * suitabilitas_optimal(grid_sal,  32.0, 33.5, 35.0, 36.5) +
+        0.10 * suitabilitas_optimal(grid_sst,  22.0, 26.0, 30.0, 32.0)
     ) * 100
     grid_sohi = np.clip(grid_sohi, 0, 100)
+
     grid_fsi = (
-        0.35 * normalisasi_global(grid_chla, 0.05, 0.8) +
+        0.35 * normalisasi_global(grid_chla,  0.05, 0.8) +
         0.25 * suitabilitas_optimal(grid_sst, 24.0, 28.0, 30.0, 33.0) +
-        0.20 * normalisasi_global(grid_do, 4.5, 7.5) +
-        0.10 * normalisasi_global(grid_speed, 0.0, 0.25) +
+        0.20 * normalisasi_global(grid_do,    4.5,  7.5) +
+        0.10 * normalisasi_global(grid_speed, 0.0,  0.25) +
         0.10 * (1 - normalisasi_global(grid_wave, 0.2, 2.5))
     ) * 100
     grid_fsi = np.clip(grid_fsi, 0, 100)
+
     grid_angin_u = angin_u + vs * 0.25
     grid_angin_v = angin_v + vs * 0.12
 
