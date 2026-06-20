@@ -268,7 +268,7 @@ df["Ocean_Health_Index"] = (
 ) * 100
 
 df["Fisheries_Index"] = (
-    0.35 * normalisasi_global(df["chla"], 0.05, 0.8) +
+    0.35 * suitabilitas_optimal(df["chla"], 0.05, 0.10, 0.50, 0.80) +
     0.25 * suitabilitas_optimal(df["sst"], 24.0, 28.0, 30.0, 33.0) +
     0.20 * normalisasi_global(df["do"], 4.5, 7.5) +
     0.10 * normalisasi_global(df["current_speed"], 0.0, 0.25) +
@@ -352,6 +352,14 @@ def get_arah_angin(df_src):
     u = float(df_src["angin_u"].mean()); v = float(df_src["angin_v"].mean())
     deg = (90.0 - np.degrees(np.arctan2(-v, -u)) + 360.0) % 360.0
     return _deg_to_compass(deg)
+
+# [FIX] Fungsi baru: hitung kecepatan angin total dari komponen u dan v
+def get_kecepatan_angin(df_src):
+    if df_src is None or (hasattr(df_src, "empty") and df_src.empty):
+        return 0.0
+    u = float(df_src["angin_u"].mean())
+    v = float(df_src["angin_v"].mean())
+    return float(np.sqrt(u**2 + v**2))
 
 
 # =========================================
@@ -640,7 +648,8 @@ with st.sidebar:
         "sst":"Sea Surface Temp (SST)","ssta":"SST Anomali","ph":"pH Laut",
         "do":"Dissolved Oxygen","salinitas":"Salinitas","chla":"Klorofil-a",
         "current_speed":"Kecepatan Arus","gelombang":"Tinggi Gelombang",
-        "angin_u":"Angin Zonal (U)","angin_v":"Angin Meridional (V)",
+        "angin_u":"Angin Zonal U (m/s, + ke Timur)",
+        "angin_v":"Angin Meridional V (m/s, + ke Utara)",
     }
     if st.session_state.role == "akademisi":
         parameter = st.selectbox("PARAMETER RISET", list(PARAM_LABELS.keys()),
@@ -697,9 +706,13 @@ def render_status_card(status, mean_fsi, waktu_label):
 </div>
 """
 
+# [FIX] render_perairan_card: ganti "Angin Dari" (hanya arah) →
+# "Kec. Angin" (kecepatan total m/s + arah kompas) untuk nelayan
 def render_perairan_card(df_map, arah_arus, ikon_arus, arah_angin, ikon_angin):
-    chla_mean = df_map["chla"].mean()
-    do_mean   = df_map["do"].mean()
+    chla_mean  = df_map["chla"].mean()
+    do_mean    = df_map["do"].mean()
+    # Hitung kecepatan angin total dari komponen u dan v
+    wind_speed = float(np.sqrt(df_map["angin_u"].mean()**2 + df_map["angin_v"].mean()**2))
     return f"""
 <div style="background:#FFFFFF;border:1.5px solid #C8E8F8;border-radius:14px;padding:20px;box-shadow:0 3px 12px rgba(0,63,94,0.08);">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
@@ -719,9 +732,9 @@ def render_perairan_card(df_map, arah_arus, ikon_arus, arah_angin, ikon_angin):
       <div style="font-size:11px;color:#5A88A8;">{arah_arus}</div>
     </div>
     <div style="text-align:center;background:rgba(255,209,102,0.10);border-radius:10px;padding:14px 8px;">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5A88A8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Angin Dari</div>
-      <div style="font-size:18px;font-weight:800;color:#003F5E;">{ikon_angin}</div>
-      <div style="font-size:11px;color:#5A88A8;">{arah_angin}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5A88A8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Kec. Angin</div>
+      <div style="font-size:18px;font-weight:800;color:#003F5E;">{wind_speed:.1f} m/s</div>
+      <div style="font-size:11px;color:#5A88A8;">{ikon_angin} dari {arah_angin}</div>
     </div>
   </div>
 </div>
@@ -1046,8 +1059,9 @@ elif mode == "Real Time":
             0.10 * suitabilitas_optimal(df_rt["sst"], 22.0, 26.0, 30.0, 32.0)
         ) * 100
     if "Fisheries_Index" not in df_rt.columns:
+        # [FIX] Sebelumnya pakai df["chla"] (data historis!) — seharusnya df_rt["chla"]
         df_rt["Fisheries_Index"] = (
-            0.35 * suitabilitas_optimal(df["chla"], 0.05, 0.10, 0.50, 0.80) +
+            0.35 * suitabilitas_optimal(df_rt["chla"], 0.05, 0.10, 0.50, 0.80) +
             0.25 * suitabilitas_optimal(df_rt["sst"], 24.0, 28.0, 30.0, 33.0) +
             0.20 * normalisasi_global(df_rt["do"], 4.5, 7.5) +
             0.10 * normalisasi_global(df_rt["current_speed"], 0.0, 0.25) +
@@ -1057,6 +1071,7 @@ elif mode == "Real Time":
     df_map_rt = build_map_from_df(df_rt)
     arah_arus_rt,  ikon_arus_rt  = get_arah_arus(df_rt)
     arah_angin_rt, ikon_angin_rt = get_arah_angin(df_rt)
+    wind_speed_rt = get_kecepatan_angin(df_rt)  # [FIX] kecepatan angin total
 
     if st.session_state.role == "nelayan":
         mean_fsi = float(df_rt["Fisheries_Index"].mean())
@@ -1097,13 +1112,15 @@ elif mode == "Real Time":
             src_cmems, ic_cmems = _src_label(cmems_ok, "CMEMS")
             src_era5,  ic_era5  = _src_label(era5_ok,  "Open-Meteo")
             src_bmkg,  ic_bmkg  = _src_label(bmkg_ok,  "BMKG/Open-Meteo")
+
+            # [FIX] Ganti "Angin U" → "Kec. Angin" (kecepatan total + arah)
             param_rt_list = [
                 ("SST",          f"{float(df_rt['sst'].mean()):.2f} °C",        src_cmems, ic_cmems),
                 ("Salinitas",    f"{float(df_rt['salinitas'].mean()):.2f} PSU",  src_cmems, ic_cmems),
                 ("Klorofil-a",   f"{float(df_rt['chla'].mean()):.3f} mg/m³",    src_cmems, ic_cmems),
                 ("Dissolved O₂", f"{float(df_rt['do'].mean()):.2f} mg/L",       "Derivasi", "–"),
                 ("Gelombang",    f"{float(df_rt['gelombang'].mean()):.2f} m",    src_bmkg, ic_bmkg),
-                ("Angin U",      f"{float(df_rt['angin_u'].mean()):.2f} m/s",   src_era5, ic_era5),
+                ("Kec. Angin",   f"{wind_speed_rt:.1f} m/s ({ikon_angin_rt} {arah_angin_rt})", src_era5, ic_era5),
             ]
             cols_rt = st.columns(3)
             for idx, (label, val, src, ic) in enumerate(param_rt_list):
