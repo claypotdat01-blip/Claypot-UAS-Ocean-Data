@@ -667,7 +667,7 @@ def build_realtime_dataframe(cmems_user, cmems_pass, cds_uid="", cds_key=""):
 
     # ── Fisheries Index ──────────────────────────────────────────────────
     df_out["Fisheries_Index"] = np.clip((
-        0.35 * _norm(df_out["chla"], 0.05, 0.80) +
+        0.35 * _suit(df_out["chla"], 0.05, 0.10, 0.50, 0.80) +
         0.25 * _suit(df_out["sst"], 24.0, 28.0, 30.0, 33.0) +
         0.20 * _norm(df_out["do"], 4.5, 7.5) +
         0.10 * _norm(df_out["current_speed"], 0.0, 0.25) +
