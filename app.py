@@ -535,7 +535,7 @@ if st.session_state.page == "home":
 
     st.markdown("""
 <div style="background:#FFFFFF;border:1.5px solid #C8E8F8;border-radius:16px;padding:28px 32px;text-align:center;margin-top:32px;box-shadow:0 4px 16px rgba(0,119,182,0.08);">
-  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#00C9E0;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:20px;font-weight:600;">Tim Pengembang</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#00C9E0;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:20px;font-weight:600;text-align:center;">Tim Pengembang</div>
   <div style="display:flex;justify-content:center;gap:40px;flex-wrap:wrap;align-items:center;">
     <div style="text-align:center;"><div style="font-weight:700;color:#003F5E;font-size:13px;">Ratu Salwa Ghazalia Hade</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#5A88A8;margin-top:3px;">12923016</div></div>
     <div style="width:1px;height:36px;background:#C8E8F8;"></div>
