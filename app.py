@@ -519,7 +519,7 @@ if st.session_state.page == "home":
     with c2:
         st.markdown("""
 <div style="background:#FFFFFF;border:1.5px solid #C8E8F8;border-radius:16px;padding:32px 28px;text-align:center;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,119,182,0.10);">
-  <h3 style="color:#003F5E;font-size:19px;font-weight:800;margin:0 0 8px;">Akademisi / Peneliti</h3>
+  <h3 style="color:#003F5E;font-size:19px;font-weight:800;margin:0 0 8px;">Akademisi </h3>
   <p style="color:#5A88A8;font-size:14px;margin:0 0 18px;line-height:1.7;">12 parameter oseanografi, time series 20 tahun,<br>korelasi, dan proyeksi Prophet.</p>
   <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap;">
     <span style="background:rgba(0,201,167,0.12);color:#00875A;font-size:10px;padding:4px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;border:1px solid rgba(0,201,167,0.3);font-weight:600;">Prophet Forecast</span>
